@@ -990,6 +990,9 @@ button,input,select,textarea{max-width:100%}
   }
 }
 </style>
+<style id="password-toggle-style">
+.password-field{position:relative}.password-field input{padding-right:48px!important}.password-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:#86a99a;cursor:pointer;font-size:18px;padding:5px;line-height:1}.password-toggle:hover{color:#72f2ad}
+</style>
 </head>
 <body>
 <div id="globalMenuBackdrop" class="global-menu-backdrop" onclick="closeGlobalMenu()"></div>
@@ -1006,7 +1009,7 @@ button,input,select,textarea{max-width:100%}
 
     <form id="loginForm" class="auth-form" onsubmit="login(event)">
       <div><label for="loginEmail">E-mail</label><input id="loginEmail" type="email" autocomplete="email" placeholder="aluno@email.com" required></div>
-      <div><label for="loginPassword">Senha</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Sua senha" required></div>
+      <div><label for="loginPassword">Senha</label><div class="password-field"><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Sua senha" required><button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)" aria-label="Mostrar senha">👁️</button></div></div>
       <div id="loginError" class="auth-error"></div>
       <button class="auth-submit" type="submit">Entrar</button>
     </form>
@@ -1029,8 +1032,8 @@ button,input,select,textarea{max-width:100%}
         <button type="button" class="avatar-choice" data-avatar="🧙‍♂️" onclick="selectAvatar(this)">🧙‍♂️</button>
       </div><input id="regAvatar" type="hidden" value="🧑‍🎓"></div>
       <div><label for="regEmail">E-mail</label><input id="regEmail" type="email" autocomplete="email" placeholder="aluno@email.com" required></div>
-      <div><label for="regPassword">Crie sua senha</label><input id="regPassword" type="password" autocomplete="new-password" minlength="6" placeholder="Mínimo de 6 caracteres" required></div>
-      <div><label for="regPassword2">Confirme sua senha</label><input id="regPassword2" type="password" autocomplete="new-password" placeholder="Digite a senha novamente" required></div>
+      <div><label for="regPassword">Crie sua senha</label><div class="password-field"><input id="regPassword" type="password" autocomplete="new-password" minlength="6" placeholder="Mínimo de 6 caracteres" required><button type="button" class="password-toggle" onclick="togglePassword('regPassword', this)" aria-label="Mostrar senha">👁️</button></div></div>
+      <div><label for="regPassword2">Confirme sua senha</label><div class="password-field"><input id="regPassword2" type="password" autocomplete="new-password" placeholder="Digite a senha novamente" required><button type="button" class="password-toggle" onclick="togglePassword('regPassword2', this)" aria-label="Mostrar senha">👁️</button></div></div>
       <div id="registerError" class="auth-error"></div>
       <button class="auth-submit auth-start" type="submit">COMEÇAR MINHA JORNADA →</button>
     </form>
@@ -1853,10 +1856,19 @@ function enterApp(){
   applyRoleMenus();
   renderYear(currentUser.year);
   renderHome();
+
+  // Depois de reconstruir a aplicação, retorna à última aba visitada.
+  // Se não houver uma aba salva, permanece no Início.
+  const savedSection = localStorage.getItem("mathCurrentSection") || "inicio";
+  const allowedSections = ["inicio","aulas","exercicios","desempenho","ranking","conquistas","missoes","mapa","perfil","turma","professor"];
+  if(allowedSections.includes(savedSection) && savedSection !== "inicio") {
+    setTimeout(()=>openSection(savedSection),0);
+  }
 }
 async function logout(){
   try{ await supabaseClient.auth.signOut(); }catch(err){ console.warn(err); }
   localStorage.removeItem("mathCurrentUser");
+  localStorage.removeItem("mathCurrentSection");
   currentUser=null;
   document.getElementById("app").classList.add("app-hidden");
   document.getElementById("authScreen").classList.remove("app-hidden");
@@ -2242,6 +2254,8 @@ window.addEventListener("resize",()=>{
 function openSection(section){
  if(section==="professor" && !isProfessor()){ return; }
  if(section==="turma" && isProfessor()){ return; }
+ // Guarda a última aba para que um recarregamento preserve exatamente a seção atual.
+ try{ localStorage.setItem("mathCurrentSection", section); }catch(e){}
  const dash=document.getElementById("dashboardHome");
  const lessons=document.getElementById("lessonsPage");
  const nav=document.getElementById("sideNav");
@@ -2287,7 +2301,7 @@ function openLessonsPage(){
  // Aulas segue exatamente o mesmo fluxo das demais seções:
  // o conteúdo é colocado diretamente dentro de #content.
  // Não usamos uma página paralela nem um estado especial para Aulas.
- if(dash) dash.classList.add("lessons-mode"), dash.classList.remove("app-hidden","menu-only");
+ if(dash) dash.classList.remove("lessons-mode","app-hidden","menu-only");
  content.style.display="block";
  content.innerHTML=`<div id="lessonsPage" class="page-view active">
    <div class="wrap" style="max-width:1050px;padding:24px 18px 50px">
@@ -4011,6 +4025,10 @@ html,body{overflow-x:hidden}
 @media(max-width:760px){.map-topbar{padding:17px}.map-topbar h2{font-size:19px}.map-progress-ring{width:62px;height:62px}.world-map-canvas{min-height:820px}.land-main{width:88%;height:72%;left:6%;top:15%}.map-paths{opacity:.55}.map-center{width:112px;height:112px}.map-center span{font-size:24px}.map-center b{font-size:7px}.map-center small{font-size:8px}.world-marker{width:155px}.world-art{height:67px}.world-marker-body{grid-template-columns:23px minmax(0,1fr) 18px;padding:7px}.world-number{width:22px;height:22px;font-size:9px}.world-marker-body strong{font-size:9px}.world-marker-body small,.world-marker-body em{font-size:6px}.world-arrow{font-size:13px}.nw{left:3%;top:11%}.ne{right:3%;top:11%}.w{left:2%;top:39%}.e{right:2%;top:39%}.sw{left:7%;bottom:8%}.se{right:7%;bottom:8%}.map-title-stamp{left:12px;top:10px}.map-compass{right:12px;top:10px}.map-legend{font-size:7px;gap:7px;bottom:8px}.map-caption{padding:10px}.detail-banner{grid-template-columns:86px minmax(0,1fr);gap:10px}.detail-banner-art{height:86px}.detail-score{grid-column:2;text-align:left}.detail-banner h2{font-size:16px}.explore-grid{grid-template-columns:1fr;padding:10px}.explore-card{grid-template-columns:68px minmax(0,1fr)}.map-challenge-clean .action-btn{margin-left:0;width:100%}}
 @media(max-width:430px){.world-map-canvas{min-height:870px}.world-marker{width:140px}.world-marker-body{grid-template-columns:20px minmax(0,1fr)}.world-arrow{display:none}.nw{left:2%;top:10%}.ne{right:2%;top:10%}.w{left:1%;top:39%}.e{right:1%;top:39%}.sw{left:4%;bottom:8%}.se{right:4%;bottom:8%}.map-center{width:96px;height:96px}.map-center span{font-size:20px}.map-center small{max-width:75px}.map-legend{display:none}}
 </style>
+
+<script>
+function togglePassword(id, button){const input=document.getElementById(id);if(!input)return;const show=input.type==='password';input.type=show?'text':'password';button.textContent=show?'🙈':'👁️';button.setAttribute('aria-label',show?'Ocultar senha':'Mostrar senha');}
+</script>
 </body>
 </html>
 
