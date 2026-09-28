@@ -1670,7 +1670,7 @@ async function login(event){
     const user=data.user; if(!user){authMessage("loginError","Não foi possível entrar.");return;}
     const result=await supabaseClient.from("profiles").select("*").eq("id",user.id).maybeSingle();
     const profile=result.data||{}; const meta=user.user_metadata||{};
-    const yearNumber=profile.ano_escolar||meta.ano_escolar; const year=yearNumber?`${yearNumber}º ano`:"";
+    const yearNumber=meta.ano_escolar||profile.ano_escolar; const year=yearNumber?`${yearNumber}º ano`:"";
     currentUser={name:profile.nome_exibicao||meta.nome_exibicao||email.split("@")[0],fullName:profile.nome_completo||meta.nome_completo||"",birthDate:profile.data_nascimento||meta.data_nascimento||"",classCode:profile?.codigo_turma||meta.class_code||"",email:user.email||email,year,avatar:profile.avatar||meta.avatar||"🧑‍🎓",tipoUsuario:profile.tipo_usuario||meta.tipo_usuario||"aluno",supabaseId:user.id};
     score=Number(profile.xp||0); answered=Number(localStorage.getItem("mathAnswered")||0);
     localStorage.setItem("mathCurrentUser",JSON.stringify(currentUser)); localStorage.setItem("mathScore",String(score)); localStorage.setItem("mathAnswered",String(answered));
@@ -3693,7 +3693,7 @@ async function restoreSupabaseSession(){
     const {data}=await supabaseClient.auth.getSession();
     if(data?.session?.user){
       const user=data.session.user; const result=await supabaseClient.from("profiles").select("*").eq("id",user.id).maybeSingle();
-      const profile=result.data||{}; const meta=user.user_metadata||{}; const yearNumber=profile.ano_escolar||meta.ano_escolar;
+      const profile=result.data||{}; const meta=user.user_metadata||{}; const yearNumber=meta.ano_escolar||profile.ano_escolar;
       currentUser={name:profile.nome_exibicao||meta.nome_exibicao||user.email?.split("@")[0]||"Aluno",fullName:profile.nome_completo||meta.nome_completo||"",birthDate:profile.data_nascimento||meta.data_nascimento||"",classCode:profile?.codigo_turma||meta.class_code||"",email:user.email||"",year:yearNumber?`${yearNumber}º ano`:"",avatar:profile.avatar||meta.avatar||"🧑‍🎓",tipoUsuario:profile.tipo_usuario||meta.tipo_usuario||"aluno",supabaseId:user.id};
       localStorage.setItem("mathCurrentUser",JSON.stringify(currentUser));
       await loadCloudProgress(user.id);
