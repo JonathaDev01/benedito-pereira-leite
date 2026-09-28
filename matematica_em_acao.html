@@ -2650,9 +2650,45 @@ async function startActivityByCode(code){
  }
 }
 
-function createClass(event){
- event.preventDefault(); const name=document.getElementById("newClassName").value.trim(); const year=document.getElementById("newClassYear").value;
- if(!name||!year) return; const cls={id:Date.now().toString(36),name,year,code:makeCode("BL"),teacherEmail:currentUser.email,teacherName:currentUser.name,members:[]}; const list=localClasses(); list.push(cls); saveLocalClasses(list); teacherSelectedClass=cls.code; teacherTab("classes");
+async function createClass(event){
+ event.preventDefault();
+ const name=document.getElementById("newClassName")?.value.trim();
+ const year=document.getElementById("newClassYear")?.value;
+ if(!name||!year){ alert("Preencha o nome e o ano da turma."); return; }
+ const code=makeCode("BL");
+ const cls={id:Date.now().toString(36),name,year,code,teacherEmail:currentUser?.email||"",teacherName:currentUser?.name||"",members:[]};
+
+ // Cria imediatamente no armazenamento local. Assim o botão nunca fica sem resposta
+ // e a turma aparece mesmo enquanto a RPC do Supabase não estiver criada.
+ const list=localClasses();
+ list.push(cls);
+ saveLocalClasses(list);
+ teacherSelectedYear=year;
+ teacherSelectedClass=code;
+
+ // Se a RPC existir, sincroniza a mesma turma com o Supabase.
+ if(currentUser?.supabaseId){
+   try{
+     const {data,error}=await supabaseClient.rpc("professor_criar_turma",{
+       p_nome:name,
+       p_ano_escolar:Number(String(year).match(/\d+/)?.[0]||6),
+       p_codigo:code
+     });
+     if(error) throw error;
+     const created=Array.isArray(data)?data[0]:data;
+     const createdId=created?.turma_id||created?.id||cls.id;
+     const createdCode=created?.codigo_turma||created?.codigo||code;
+     const updated=localClasses().map(c=>c.id===cls.id?{...c,id:createdId,code:createdCode}:c);
+     saveLocalClasses(updated);
+     teacherSelectedClass=createdCode;
+   }catch(err){
+     console.warn("RPC professor_criar_turma indisponível ou falhou; mantendo criação local:",err);
+   }
+ }
+
+ if(document.getElementById("newClassName")) document.getElementById("newClassName").value="";
+ alert(`Turma criada com sucesso! Código: ${teacherSelectedClass}`);
+ await renderTeacherDashboard();
 }
 async function createActivity(event){
  event.preventDefault();
@@ -2869,7 +2905,46 @@ async function renderTeacherDashboard(){
          });
          if(r.aluno_id) byId.get(key).members.push({id:r.aluno_id,name:r.aluno_nome,avatar:r.aluno_avatar,xp:Number(r.aluno_xp||0)});
        });
-       classes=Array.from(byId.values()).filter(c=>c.year===year);
+async function createClass(event){
+ event.preventDefault();
+ const name=document.getElementById("newClassName")?.value.trim();
+ const year=document.getElementById("newClassYear")?.value;
+ if(!name||!year){ alert("Preencha o nome e o ano da turma."); return; }
+ const code=makeCode("BL");
+ const cls={id:Date.now().toString(36),name,year,code,teacherEmail:currentUser?.email||"",teacherName:currentUser?.name||"",members:[]};
+
+ // Cria imediatamente no armazenamento local. Assim o botão nunca fica sem resposta
+ // e a turma aparece mesmo enquanto a RPC do Supabase não estiver criada.
+ const list=localClasses();
+ list.push(cls);
+ saveLocalClasses(list);
+ teacherSelectedYear=year;
+ teacherSelectedClass=code;
+
+ // Se a RPC existir, sincroniza a mesma turma com o Supabase.
+ if(currentUser?.supabaseId){
+   try{
+     const {data,error}=await supabaseClient.rpc("professor_criar_turma",{
+       p_nome:name,
+       p_ano_escolar:Number(String(year).match(/\d+/)?.[0]||6),
+       p_codigo:code
+     });
+     if(error) throw error;
+     const created=Array.isArray(data)?data[0]:data;
+     const createdId=created?.turma_id||created?.id||cls.id;
+     const createdCode=created?.codigo_turma||created?.codigo||code;
+     const updated=localClasses().map(c=>c.id===cls.id?{...c,id:createdId,code:createdCode}:c);
+     saveLocalClasses(updated);
+     teacherSelectedClass=createdCode;
+   }catch(err){
+     console.warn("RPC professor_criar_turma indisponível ou falhou; mantendo criação local:",err);
+   }
+ }
+
+ if(document.getElementById("newClassName")) document.getElementById("newClassName").value="";
+ alert(`Turma criada com sucesso! Código: ${teacherSelectedClass}`);
+ await renderTeacherDashboard();
+}
      } else if(error){
        console.warn("Turmas do professor no Supabase:",error);
      }
