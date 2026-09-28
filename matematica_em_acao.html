@@ -853,6 +853,143 @@ button,input,select,textarea{max-width:100%}
 }
 </style>
 
+<style id="aulas-layout-fix">
+/* Aulas: manter o conteúdo alinhado ao lado do menu, sem deslocamento fantasma */
+@media (min-width:901px){
+  #lessonsPage{margin-left:0!important;padding-left:0!important;padding-right:0!important;width:100%!important;box-sizing:border-box!important;}
+  #lessonsPage .wrap{max-width:none!important;width:100%!important;margin-left:0!important;margin-right:0!important;padding:24px 0 50px!important;box-sizing:border-box!important;}
+  #lessonsPage .wrap > .panel{width:100%!important;box-sizing:border-box!important;}
+}
+</style>
+
+<style id="aulas-horizontal-final-fix">
+@media (min-width:901px){
+  #content #lessonsPage,#content #lessonsPage.menu-open,#content #lessonsPage.active{width:100%!important;max-width:none!important;margin:0!important;padding-left:0!important;padding-right:0!important;box-sizing:border-box!important;}
+  #content #lessonsPage > .wrap,#content #lessonsPage.active > .wrap,#content #lessonsPage.menu-open > .wrap{width:100%!important;max-width:none!important;margin:0!important;margin-left:0!important;margin-right:0!important;padding:24px 0 50px!important;box-sizing:border-box!important;}
+  #content #lessonsPage > .wrap > .panel{width:100%!important;max-width:none!important;margin:0!important;box-sizing:border-box!important;}
+}
+@media (max-width:900px){
+  #content #lessonsPage,#content #lessonsPage.menu-open,#content #lessonsPage.active{width:100%!important;max-width:none!important;margin:0!important;padding-left:0!important;padding-right:0!important;box-sizing:border-box!important;}
+  #content #lessonsPage > .wrap{width:100%!important;max-width:none!important;margin:0!important;padding:14px 0 32px!important;box-sizing:border-box!important;}
+}
+</style>
+
+<style id="aulas-menu-no-shift-final">
+/* CORREÇÃO FINAL — abrir/fechar a barra lateral nunca desloca a página Aulas. */
+@media (min-width:901px){
+  #content #lessonsPage,
+  #content #lessonsPage.active,
+  #content #lessonsPage.menu-open,
+  #content #lessonsPage.active.menu-open{
+    position:relative!important;
+    left:0!important;
+    right:auto!important;
+    transform:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    width:100%!important;
+    max-width:none!important;
+    box-sizing:border-box!important;
+  }
+  #content #lessonsPage > .wrap,
+  #content #lessonsPage.active > .wrap,
+  #content #lessonsPage.menu-open > .wrap,
+  #content #lessonsPage.active.menu-open > .wrap{
+    position:relative!important;
+    left:0!important;
+    transform:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    width:100%!important;
+    max-width:none!important;
+    box-sizing:border-box!important;
+  }
+}
+@media (max-width:900px){
+  #content #lessonsPage,
+  #content #lessonsPage.active,
+  #content #lessonsPage.menu-open,
+  #content #lessonsPage.active.menu-open{
+    margin:0!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    width:100%!important;
+    max-width:none!important;
+    transform:none!important;
+  }
+}
+</style>
+<style id="aulas-sidebar-definitive-no-shift">
+/* CORREÇÃO DEFINITIVA: em Aulas, a lateral é flutuante e nunca altera o espaço do conteúdo. */
+@media (min-width:901px){
+  #dashboardHome.game-dashboard.lessons-mode,
+  #dashboardHome.game-dashboard.lessons-mode.menu-collapsed{
+    display:block!important;
+    position:relative!important;
+    width:100%!important;
+    max-width:none!important;
+    min-height:0!important;
+    height:auto!important;
+    margin:0!important;
+    padding:0!important;
+    grid-template-columns:none!important;
+  }
+  #dashboardHome.game-dashboard.lessons-mode .dashboard-content,
+  #dashboardHome.game-dashboard.lessons-mode.menu-collapsed .dashboard-content{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    grid-column:1 / -1!important;
+  }
+  #dashboardHome.game-dashboard.lessons-mode #content{
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+  }
+  #dashboardHome.game-dashboard.lessons-mode #sideNav.side-nav,
+  #dashboardHome.game-dashboard.lessons-mode #sideNav.side-nav.open,
+  #dashboardHome.game-dashboard.lessons-mode #sideNav.side-nav.menu-closed{
+    position:fixed!important;
+    left:22px!important;
+    top:145px!important;
+    width:255px!important;
+    height:calc(100vh - 170px)!important;
+    z-index:3000!important;
+  }
+  #dashboardHome.game-dashboard.lessons-mode #sideNav.side-nav.menu-closed{
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+    transform:translateX(-120%)!important;
+  }
+  #dashboardHome.game-dashboard.lessons-mode #sideNav.side-nav.open{
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    transform:translateX(0)!important;
+  }
+  #content #lessonsPage,
+  #content #lessonsPage.active,
+  #content #lessonsPage.menu-open,
+  #content #lessonsPage.active.menu-open{
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    transform:none!important;
+    box-sizing:border-box!important;
+  }
+}
+</style>
 </head>
 <body>
 <div id="globalMenuBackdrop" class="global-menu-backdrop" onclick="closeGlobalMenu()"></div>
@@ -2076,7 +2213,7 @@ function toggleGlobalMenu(event){
    dash.classList.toggle("menu-collapsed",!willOpen);
  }
  if(lessons){
-   lessons.classList.toggle("menu-open",willOpen);
+   lessons.classList.remove("menu-open");
  }
 
  // Mobile/tablet: a lateral é flutuante e não altera a largura do conteúdo.
@@ -2150,7 +2287,7 @@ function openLessonsPage(){
  // Aulas segue exatamente o mesmo fluxo das demais seções:
  // o conteúdo é colocado diretamente dentro de #content.
  // Não usamos uma página paralela nem um estado especial para Aulas.
- if(dash) dash.classList.remove("app-hidden","menu-only","lessons-mode");
+ if(dash) dash.classList.add("lessons-mode"), dash.classList.remove("app-hidden","menu-only");
  content.style.display="block";
  content.innerHTML=`<div id="lessonsPage" class="page-view active">
    <div class="wrap" style="max-width:1050px;padding:24px 18px 50px">
@@ -3828,7 +3965,7 @@ html,body{overflow-x:hidden}
         nav.classList.toggle('open',menuEstaAberto);
         nav.classList.toggle('menu-closed',!menuEstaAberto);
       }
-      if(lessons) lessons.classList.toggle('menu-open',menuEstaAberto);
+      if(lessons) lessons.classList.remove('menu-open');
       originalOpenLessonsPage.apply(this, arguments);
       if(typeof syncMenuLayout === 'function') syncMenuLayout(menuEstaAberto);
     };
