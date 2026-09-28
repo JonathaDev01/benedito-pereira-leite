@@ -1712,6 +1712,7 @@ function enterApp(){
   document.getElementById("welcomeYear").textContent=currentUser.year;
   document.getElementById("userAvatar").textContent=currentUser.avatar||"🧑‍🎓";
   syncCurrentUser();
+  updateUserHeader();
   applyRoleMenus();
   renderYear(currentUser.year);
   renderHome();
