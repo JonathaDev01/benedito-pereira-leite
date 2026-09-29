@@ -361,6 +361,7 @@ to{opacity:1;transform:translateY(0)}}
   box-sizing:border-box;
 }
 
+
 </style></style>
 <style>
 .rank-aura{mix-blend-mode:screen;transform-origin:50% 50%;animation:rankAuraBreath 2.2s ease-in-out infinite}
@@ -1845,10 +1846,31 @@ function updateUserHeader(){
  const name=u.name||"Aluno", year=u.year||"";
  const a=document.getElementById("topName"), y=document.getElementById("topYear"), av=document.getElementById("topAvatar");
  const un=document.getElementById("universalName"), uy=document.getElementById("universalYear");
+ const welcomeYear=document.getElementById("welcomeYear");
  const avatar=u.avatar||currentUser?.avatar||"🧑‍🎓";
- if(a)a.textContent=name;if(y)y.textContent=year;if(av)av.textContent=avatar;
- if(un)un.textContent=name;if(uy)uy.textContent=year;
+ const professor=isProfessor();
+ if(a)a.textContent=name;
+ if(y){ y.textContent=year; y.style.display=professor?"none":""; }
+ if(av)av.textContent=avatar;
+ if(un)un.textContent=name;
+ if(uy){ uy.textContent=year; uy.style.display=professor?"none":""; }
+ if(welcomeYear){ welcomeYear.textContent=year||"Ano escolar"; welcomeYear.style.display=professor?"none":""; }
 }
+function isProfessorRecord(u){
+  if(!u) return false;
+  const sid=String(u.supabaseId||u.id||"").trim().toLowerCase();
+  const email=String(u.email||"").trim().toLowerCase();
+  const tipo=String(u.tipoUsuario||u.role||u.perfil||u.tipo||"").trim().toLowerCase();
+  const professorId="1621e45d-a0ea-42ec-95d7-85beaeeec053";
+  const currentSid=String(currentUser?.supabaseId||"").trim().toLowerCase();
+  const currentEmail=String(currentUser?.email||"").trim().toLowerCase();
+  return tipo==="professor" ||
+         tipo==="professora" ||
+         sid===professorId ||
+         (isProfessor() && currentSid && sid===currentSid) ||
+         (isProfessor() && currentEmail && email===currentEmail);
+}
+
 function isProfessor(){
   const tipo=String(currentUser?.tipoUsuario||getCurrentRecord()?.tipoUsuario||"").trim().toLowerCase();
   const id=String(currentUser?.supabaseId||getCurrentRecord()?.supabaseId||"").trim().toLowerCase();
@@ -3130,7 +3152,10 @@ async function renderTeacherDashboard(){
        students=cloudYearStudents
          .filter(m=>String(m.aluno_id)!==String(currentUser.supabaseId))
          .map(m=>{
-           const local=all.find(u=>String(u.supabaseId)===String(m.aluno_id) || u.name===m.aluno_nome);
+           const local=all.find(u=>
+             String(u.supabaseId||"")===String(m.aluno_id||"") ||
+             String(u.name||"")===String(m.aluno_nome||"")
+           );
            return {
              supabaseId:m.aluno_id,
              name:m.aluno_nome||"Aluno",
@@ -3143,40 +3168,43 @@ async function renderTeacherDashboard(){
            };
          });
 
-       // A RPC de alunos por ano identifica quem pertence ao ano, mas o XP,
-       // questões e acertos reais ficam no progresso do aluno. Para manter a
-       // opção "Todas" fiel ao perfil individual, consolidamos as estatísticas
-       // das turmas do professor e mesclamos por aluno.
-       if(students.length && classes.length){
-         const statsById=new Map();
+       // Enriquecimento das estatísticas com os dados das turmas do professor.
+       // Isso cobre alunos que estão em uma turma mesmo quando o cache local
+       // desse navegador não contém o progresso atualizado.
+       try{
+         const byStudent=new Map(
+           students.map(s=>[String(s.supabaseId),s])
+         );
          for(const c of classes){
            if(!c?.id) continue;
            try{
-             const {data:cloudClassStudents,error:classError}=await supabaseClient.rpc(
+             const {data:rows,error:rowsError}=await supabaseClient.rpc(
                "professor_alunos_turma",
                {p_turma_id:c.id}
              );
-             if(!classError && Array.isArray(cloudClassStudents)){
-               cloudClassStudents.forEach(m=>{
-                 statsById.set(String(m.aluno_id),m);
-               });
-             }
-           }catch(err){
-             console.warn("Estatísticas da turma no modo Todos:",err);
+             if(rowsError || !Array.isArray(rows)) continue;
+             rows.forEach(r=>{
+               const key=String(r.aluno_id||"");
+               const s=byStudent.get(key);
+               if(!s) return;
+               const q=Number(r.questoes_respondidas||0);
+               const a=Number(r.acertos||0);
+               const xpAluno=Number(r.aluno_xp||0);
+               if(xpAluno>s.score) s.score=xpAluno;
+               if(q>s.answered){
+                 s.answered=q;
+                 s.correct=a;
+               }
+               if(r.estatisticas_conteudos && typeof r.estatisticas_conteudos==="object"){
+                 s.topicStats=r.estatisticas_conteudos;
+               }
+             });
+           }catch(e){
+             console.warn("Enriquecimento da lista de alunos:",e);
            }
          }
-
-         students=students.map(st=>{
-           const m=statsById.get(String(st.supabaseId));
-           const local=all.find(u=>String(u.supabaseId)===String(st.supabaseId) || u.name===st.name);
-           return {
-             ...st,
-             score:Number(m?.aluno_xp||0) || Number(st.score||0) || Number(local?.score||0),
-             answered:Number(m?.questoes_respondidas||0) || Number(st.answered||0) || Number(local?.answered||0),
-             correct:Number(m?.acertos||0) || Number(st.correct||0) || Number(local?.correct||0),
-             topicStats:m?.estatisticas_conteudos || st.topicStats || local?.topicStats || {}
-           };
-         });
+       }catch(e){
+         console.warn("Enriquecimento dos alunos do ano:",e);
        }
      }else if(cloudYearError){
        console.warn("Alunos do ano no Supabase:",cloudYearError);
@@ -3186,23 +3214,12 @@ async function renderTeacherDashboard(){
    }
  }
 
- // Fallback/local e comportamento normal quando uma turma específica está selecionada.
- if(selectedClass){
-   const memberEmails=new Set(
-     (selectedClass.members||[]).map(m=>typeof m==='string'?m:m.email)
-   );
-   students=all.filter(
-     u=>u.year===year &&
-        u.email!==currentUser?.email &&
-        memberEmails.has(u.email)
-   );
- }
-
- // Se "Todas" não conseguiu consultar o Supabase, mantém o fallback local.
+ // Fallback local somente se a consulta online realmente não retornar alunos.
  if(!students.length && !selectedClass){
    students=all.filter(
      u=>u.year===year &&
-        u.email!==currentUser?.email
+        u.email!==currentUser?.email &&
+        String(u.supabaseId||"")!==String(currentUser?.supabaseId||"")
    );
  }
 
@@ -3729,7 +3746,7 @@ async function fetchCloudRanking(year, scope="year"){
     if(scope==="class"){
       const {data,error}=await supabaseClient.rpc("ranking_minha_turma");
       if(error) throw error;
-      return (data||[]).filter(u=>Number(u.ano_escolar)===yearNumber).map(u=>({
+      return (data||[]).filter(u=>Number(u.ano_escolar)===yearNumber && String(u.id)!=="1621e45d-a0ea-42ec-95d7-85beaeeec053").map(u=>({
         id:u.id,
         name:u.nome_exibicao||"Aluno",
         year:`${u.ano_escolar}º ano`,
@@ -3742,7 +3759,7 @@ async function fetchCloudRanking(year, scope="year"){
     }
     const {data,error}=await supabaseClient.from("ranking_alunos").select("id,nome_exibicao,ano_escolar,avatar,xp,codigo_turma").eq("ano_escolar",yearNumber).order("xp",{ascending:false});
     if(error) throw error;
-    return (data||[]).map(u=>({
+    return (data||[]).filter(u=>String(u.id)!=="1621e45d-a0ea-42ec-95d7-85beaeeec053").map(u=>({
       id:u.id,
       name:u.nome_exibicao||"Aluno",
       year:`${u.ano_escolar}º ano`,
@@ -3771,8 +3788,8 @@ async function renderRanking(year, scope="year"){
      localStorage.setItem("mathCurrentUser",JSON.stringify(currentUser));
    }
  }
- const localBase=users().filter(u=>u.year===year && (scope!=="class" || (classCode && (u.classCode||"").trim()===classCode))).map(u=>({...u,score:u.score||0,isMe:u.email===currentUser?.email})).sort((a,b)=>b.score-a.score);
- const list=cloudList!==null ? cloudList : localBase;
+ const localBase=users().filter(u=>u.year===year && String(u.supabaseId||"")!==String(currentUser?.supabaseId||"") && String(u.email||"").toLowerCase()!==String(currentUser?.email||"").toLowerCase() && (scope!=="class" || (classCode && (u.classCode||"").trim()===classCode))).map(u=>({...u,score:u.score||0,isMe:false})).sort((a,b)=>b.score-a.score);
+ const list=cloudList!==null ? cloudList.filter(u=>String(u.supabaseId||u.aluno_id||u.id||"")!==String(currentUser?.supabaseId||"") && String(u.supabaseId||u.aluno_id||u.id||"")!="1621e45d-a0ea-42ec-95d7-85beaeeec053" && String(u.email||"").toLowerCase()!==String(currentUser?.email||"").toLowerCase()) : localBase;
  const meIndex=list.findIndex(u=>u.isMe||u.supabaseId===currentUser?.supabaseId);
  const meScore=meIndex>=0 ? Number(list[meIndex]?.score||0) : Number(getCurrentRecord()?.score||score||0);
  const meRank=rankInfo(meScore);
@@ -3796,10 +3813,28 @@ async function renderRanking(year, scope="year"){
 function renderHome(){
  const u=getCurrentRecord()||{name:currentUser?.name||'Aluno',year:currentUser?.year||'9º ano',score:score,answered:0,correct:0,streak:0};
  const xp=u.score||0, r=rankInfo(xp);
- const all=users().filter(x=>x.year===u.year).map(x=>({...x,score:x.score||0})).sort((a,b)=>b.score-a.score);
- if(currentUser && !all.some(x=>x.email===currentUser.email)) all.push({...u,email:currentUser.email});
+ const all=users()
+   .filter(x=>x.year===u.year)
+   .filter(x=>{
+     if(!isProfessor()) return true;
+     const sid=String(x?.supabaseId||"").trim();
+     const email=String(x?.email||"").trim().toLowerCase();
+     const meSid=String(currentUser?.supabaseId||"").trim();
+     const meEmail=String(currentUser?.email||"").trim().toLowerCase();
+     return !(sid && meSid && sid===meSid) && !(email && meEmail && email===meEmail) && !isProfessorRecord(x);
+   })
+   .map(x=>({...x,score:Number(x.score||0)}))
+   .sort((a,b)=>b.score-a.score);
+
+ if(currentUser && !isProfessor() && !all.some(x=>
+   (x.email && currentUser.email && x.email.toLowerCase()===currentUser.email.toLowerCase()) ||
+   (x.supabaseId && currentUser.supabaseId && String(x.supabaseId)===String(currentUser.supabaseId))
+ )) all.push({...u,email:currentUser.email,supabaseId:currentUser.supabaseId});
+
  all.sort((a,b)=>b.score-a.score);
- const myPos=Math.max(1,all.findIndex(x=>x.email===currentUser.email)+1);
+ const myPos=isProfessor()
+   ? null
+   : Math.max(1,all.findIndex(x=>x.email===currentUser.email)+1);
  const accuracy=(u.answered||0)>0?Math.round(((u.correct||0)/(u.answered||1))*100):0;
  const pct=r.nextXP?Math.max(0,Math.min(100,r.progress)):100;
 
@@ -3831,7 +3866,7 @@ function renderHome(){
       <div>
         <div class="eyebrow">SUA PATENTE</div>
         <h2>${r.name}${r.idx<7?' '+r.division:''}</h2>
-        <div class="rank-sub">Nível ${r.idx+1} • ${u.year} • ${myPos}º no ranking</div>
+        <div class="rank-sub">Nível ${r.idx+1}${isProfessor()?'':` • ${u.year} • ${myPos}º no ranking`}</div>
       </div>
     </div>
     <div class="rank-xp-line">
@@ -3899,14 +3934,14 @@ function renderHome(){
 
    <section class="home-card">
     <div class="home-card-head"><h3>🏆 RANKING — ${u.year}</h3><span>Ver ranking</span></div>
-    <div class="mini-ranking">
+    <div class="mini-ranking" id="homeMiniRanking">
       ${all.slice(0,10).map((x,i)=>{
         const rr=rankInfo(x.score);
-        return `<div class="mini-rank-row ${x.email===currentUser.email?'me':''}">
+        return `<div class="mini-rank-row">
           <span class="pos">${i+1}</span>
           <div class="mini-rank-emblem">${rankEmblem(rr.name,'tiny')}</div>
           <div>
-            <div class="mini-rank-name">${x.email===currentUser.email?'Você':x.name}</div>
+            <div class="mini-rank-name">${x.name}</div>
             <div class="mini-rank-meta">${rr.name}${rr.idx<7?' '+rr.division:''}</div>
           </div>
           <span class="mini-rank-xp">${x.score.toLocaleString('pt-BR')}</span>
@@ -3916,6 +3951,39 @@ function renderHome(){
    </section>
   </div>
  </div>`;
+
+ // O mini-ranking da página inicial usa a mesma fonte online do ranking
+ // completo. Isso garante que, para o professor, todos os alunos do ano
+ // apareçam e que o próprio professor nunca seja incluído.
+ if(currentUser?.supabaseId && typeof fetchCloudRanking==="function"){
+   fetchCloudRanking(u.year,"year").then(cloudList=>{
+     const box=document.getElementById("homeMiniRanking");
+     if(!box || !Array.isArray(cloudList)) return;
+
+     const ranking=cloudList.filter(x=>{
+       const sid=String(x?.supabaseId||x?.id||"").trim();
+       const meSid=String(currentUser?.supabaseId||"").trim();
+       return !(isProfessor() && sid===meSid);
+     }).slice(0,10);
+
+     box.innerHTML=ranking.length
+       ? ranking.map((x,i)=>{
+           const rr=rankInfo(Number(x.score||0));
+           return `<div class="mini-rank-row">
+             <span class="pos">${i+1}</span>
+             <div class="mini-rank-emblem">${rankEmblem(rr.name,"tiny")}</div>
+             <div>
+               <div class="mini-rank-name">${x.name}</div>
+               <div class="mini-rank-meta">${rr.name}${rr.idx<7?" "+rr.division:""}</div>
+             </div>
+             <span class="mini-rank-xp">${Number(x.score||0).toLocaleString("pt-BR")}</span>
+           </div>`;
+         }).join("")
+       : '<div class="muted">Ainda não há jogadores nesta lista.</div>';
+   }).catch(err=>{
+     console.warn("Mini-ranking inicial:",err);
+   });
+ }
 }
 function renderYear(year){
  if(currentUser) currentUser.year=year;
