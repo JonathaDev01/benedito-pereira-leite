@@ -345,6 +345,22 @@ to{opacity:1;transform:translateY(0)}}
 .mission-big-stat{font-size:38px;font-weight:950;color:#fff;margin:14px 0;}.mission-big-stat span{font-size:25px;}
 @media(max-width:850px){.mission-columns{grid-template-columns:1fr}.mission-hero{align-items:flex-start;}.mission-hero-stat{min-width:100px}.mission-card{align-items:flex-start!important}.mission-card .quest-reward{margin-left:auto;}}
 @media(max-width:600px){.mission-hero{flex-direction:column}.mission-hero-stat{width:100%;box-sizing:border-box}.mission-card{display:grid!important;grid-template-columns:auto 1fr;gap:10px}.mission-card .quest-reward{grid-column:2;margin-left:0}.mission-claim-btn{width:100%;}}
+
+.teacher-row .secondary-btn{
+  white-space:nowrap;
+  min-width:110px;
+}
+.teacher-row .teacher-transfer-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:120px;
+  height:42px;
+  padding:10px 16px;
+  line-height:1;
+  box-sizing:border-box;
+}
+
 </style></style>
 <style>
 .rank-aura{mix-blend-mode:screen;transform-origin:50% 50%;animation:rankAuraBreath 2.2s ease-in-out infinite}
@@ -2656,39 +2672,77 @@ async function createClass(event){
  const name=document.getElementById("newClassName")?.value.trim();
  const year=document.getElementById("newClassYear")?.value;
  if(!name||!year){ alert("Preencha o nome e o ano da turma."); return; }
- const code=makeCode("BL");
- const cls={id:Date.now().toString(36),name,year,code,teacherEmail:currentUser?.email||"",teacherName:currentUser?.name||"",members:[]};
 
- // Cria imediatamente no armazenamento local. Assim o botão nunca fica sem resposta
- // e a turma aparece mesmo enquanto a RPC do Supabase não estiver criada.
+ const anoEscolar=Number(String(year).match(/\d+/)?.[0]||6);
+ const code=makeCode("BL");
+
+ // Quando conectado ao Supabase, o banco passa a ser a fonte oficial.
+ // Não salvamos como turma local antes da confirmação, para evitar turmas
+ // que aparecem no site mas não podem ser usadas em transferências.
+ if(currentUser?.supabaseId){
+   try{
+     const {data,error}=await supabaseClient.rpc("professor_criar_turma",{
+       p_nome:name,
+       p_ano_escolar:anoEscolar,
+       p_codigo:code
+     });
+     if(error) throw error;
+
+     const created=Array.isArray(data)?data[0]:data;
+     const createdId=created?.turma_id||created?.id;
+     const createdCode=created?.codigo_turma||created?.codigo||code;
+
+     if(!createdId){
+       throw new Error("O Supabase não retornou o ID da turma criada.");
+     }
+
+     const cls={
+       id:createdId,
+       name,
+       year,
+       code:createdCode,
+       teacherEmail:currentUser?.email||"",
+       teacherName:currentUser?.name||"",
+       members:[]
+     };
+
+     // Mantém uma cópia local apenas como espelho da turma que já existe no banco.
+     const withoutDuplicate=localClasses().filter(c=>String(c.code)!==String(createdCode));
+     withoutDuplicate.push(cls);
+     saveLocalClasses(withoutDuplicate);
+
+     teacherSelectedYear=year;
+     teacherSelectedClass=createdCode;
+
+     if(document.getElementById("newClassName")) document.getElementById("newClassName").value="";
+     alert(`Turma criada com sucesso! Código: ${createdCode}`);
+     await renderTeacherDashboard();
+     return;
+   }catch(err){
+     console.error("Criação da turma no Supabase:",err);
+     alert(`Não foi possível criar a turma no Supabase.\n\n${err?.message||"Verifique a conexão com o Supabase."}`);
+     return;
+   }
+ }
+
+ // Modo local somente quando não houver sessão Supabase.
+ const cls={
+   id:Date.now().toString(36),
+   name,
+   year,
+   code,
+   teacherEmail:currentUser?.email||"",
+   teacherName:currentUser?.name||"",
+   members:[]
+ };
  const list=localClasses();
  list.push(cls);
  saveLocalClasses(list);
  teacherSelectedYear=year;
  teacherSelectedClass=code;
 
- // Se a RPC existir, sincroniza a mesma turma com o Supabase.
- if(currentUser?.supabaseId){
-   try{
-     const {data,error}=await supabaseClient.rpc("professor_criar_turma",{
-       p_nome:name,
-       p_ano_escolar:Number(String(year).match(/\d+/)?.[0]||6),
-       p_codigo:code
-     });
-     if(error) throw error;
-     const created=Array.isArray(data)?data[0]:data;
-     const createdId=created?.turma_id||created?.id||cls.id;
-     const createdCode=created?.codigo_turma||created?.codigo||code;
-     const updated=localClasses().map(c=>c.id===cls.id?{...c,id:createdId,code:createdCode}:c);
-     saveLocalClasses(updated);
-     teacherSelectedClass=createdCode;
-   }catch(err){
-     console.warn("RPC professor_criar_turma indisponível ou falhou; mantendo criação local:",err);
-   }
- }
-
  if(document.getElementById("newClassName")) document.getElementById("newClassName").value="";
- alert(`Turma criada com sucesso! Código: ${teacherSelectedClass}`);
+ alert(`Turma criada com sucesso! Código: ${code}`);
  await renderTeacherDashboard();
 }
 async function deleteClass(code){
@@ -2744,10 +2798,22 @@ async function transferStudent(studentId){
    const cloudTargetClasses=Array.from(byId.values());
 
    const source=(window.__teacherClasses||[]).find(c=>String(c.code)===String(teacherSelectedClass));
-   const sourceYear=source?.year || currentUser?.year || "";
-   const currentCode=String(source?.code||teacherSelectedClass||"");
+
+   // IMPORTANTE:
+   // Quando o professor está em "Todas", teacherSelectedClass é "ALL".
+   // Nesse caso, currentUser.year é o ano do professor (9º ano), e não
+   // necessariamente o ano do aluno selecionado. Isso fazia alunos do 8º
+   // ano receberem somente turmas do 9º ano como destino.
+   // A prioridade agora é o ano real do aluno, depois o ano selecionado
+   // no painel do professor e só por último o ano do usuário logado.
+   const sourceYear=aluno?.year || source?.year || teacherSelectedYear || currentUser?.year || "";
+
+   const currentCode=String(source?.code || (teacherSelectedClass==="ALL" ? "" : teacherSelectedClass) || "");
+
    const targetClasses=cloudTargetClasses.filter(c=>
-     c.id && c.year===sourceYear && String(c.code)!==currentCode
+     c.id &&
+     c.year===sourceYear &&
+     String(c.code)!==currentCode
    );
    if(!targetClasses.length){ alert(`Não encontrei outras turmas do ${sourceYear} disponíveis para este professor.`); return; }
 
@@ -3049,8 +3115,97 @@ async function renderTeacherDashboard(){
  }
  const selectedClass=teacherSelectedClass==='ALL'?null:(classes.find(c=>c.code===teacherSelectedClass)||classes[0]||null);
  window.__teacherClasses=classes;
- const memberEmails=new Set(selectedClass?(selectedClass.members||[]).map(m=>typeof m==='string'?m:m.email):all.filter(u=>u.year===year && u.email!==currentUser?.email).map(u=>u.email));
- const students=all.filter(u=>u.year===year && u.email!==currentUser?.email && memberEmails.has(u.email));
+ let students=[];
+
+ // "Todas" precisa buscar TODOS os alunos daquele ano diretamente no Supabase,
+ // inclusive alunos que ainda não pertencem a nenhuma turma.
+ if(!selectedClass && currentUser?.supabaseId){
+   try{
+     const anoNumero=Number(String(year).match(/\d+/)?.[0]||6);
+     const {data:cloudYearStudents,error:cloudYearError}=await supabaseClient.rpc(
+       "professor_alunos_ano",
+       {p_ano_escolar:anoNumero}
+     );
+     if(!cloudYearError && Array.isArray(cloudYearStudents)){
+       students=cloudYearStudents
+         .filter(m=>String(m.aluno_id)!==String(currentUser.supabaseId))
+         .map(m=>{
+           const local=all.find(u=>String(u.supabaseId)===String(m.aluno_id) || u.name===m.aluno_nome);
+           return {
+             supabaseId:m.aluno_id,
+             name:m.aluno_nome||"Aluno",
+             avatar:m.aluno_avatar||"🧑‍🎓",
+             score:Number(m.aluno_xp||0) || Number(local?.score||0),
+             answered:Number(local?.answered||0),
+             correct:Number(local?.correct||0),
+             topicStats:local?.topicStats||{},
+             email:local?.email||""
+           };
+         });
+
+       // A RPC de alunos por ano identifica quem pertence ao ano, mas o XP,
+       // questões e acertos reais ficam no progresso do aluno. Para manter a
+       // opção "Todas" fiel ao perfil individual, consolidamos as estatísticas
+       // das turmas do professor e mesclamos por aluno.
+       if(students.length && classes.length){
+         const statsById=new Map();
+         for(const c of classes){
+           if(!c?.id) continue;
+           try{
+             const {data:cloudClassStudents,error:classError}=await supabaseClient.rpc(
+               "professor_alunos_turma",
+               {p_turma_id:c.id}
+             );
+             if(!classError && Array.isArray(cloudClassStudents)){
+               cloudClassStudents.forEach(m=>{
+                 statsById.set(String(m.aluno_id),m);
+               });
+             }
+           }catch(err){
+             console.warn("Estatísticas da turma no modo Todos:",err);
+           }
+         }
+
+         students=students.map(st=>{
+           const m=statsById.get(String(st.supabaseId));
+           const local=all.find(u=>String(u.supabaseId)===String(st.supabaseId) || u.name===st.name);
+           return {
+             ...st,
+             score:Number(m?.aluno_xp||0) || Number(st.score||0) || Number(local?.score||0),
+             answered:Number(m?.questoes_respondidas||0) || Number(st.answered||0) || Number(local?.answered||0),
+             correct:Number(m?.acertos||0) || Number(st.correct||0) || Number(local?.correct||0),
+             topicStats:m?.estatisticas_conteudos || st.topicStats || local?.topicStats || {}
+           };
+         });
+       }
+     }else if(cloudYearError){
+       console.warn("Alunos do ano no Supabase:",cloudYearError);
+     }
+   }catch(err){
+     console.warn("Falha ao carregar todos os alunos do ano:",err);
+   }
+ }
+
+ // Fallback/local e comportamento normal quando uma turma específica está selecionada.
+ if(selectedClass){
+   const memberEmails=new Set(
+     (selectedClass.members||[]).map(m=>typeof m==='string'?m:m.email)
+   );
+   students=all.filter(
+     u=>u.year===year &&
+        u.email!==currentUser?.email &&
+        memberEmails.has(u.email)
+   );
+ }
+
+ // Se "Todas" não conseguiu consultar o Supabase, mantém o fallback local.
+ if(!students.length && !selectedClass){
+   students=all.filter(
+     u=>u.year===year &&
+        u.email!==currentUser?.email
+   );
+ }
+
  window.__teacherStudents=students;
  // Se os membros vierem do Supabase, use os dados do banco para exibir os alunos.
  if(selectedClass?.members?.length && typeof selectedClass.members[0]==='object' && !students.length){
@@ -3123,7 +3278,7 @@ async function renderTeacherDashboard(){
    ${!selectedClass && !classes.length?`<div class="teacher-alert">💡 Crie uma turma para começar a acompanhar alunos por código.</div>`:''}
    <div class="teacher-content-grid"><section class="menu-panel"><div class="teacher-section-title"><h3>📈 Conteúdos que merecem atenção</h3><span class="teacher-badge">DIAGNÓSTICO</span></div>${weak.length?weak.map(t=>`<div class="teacher-topic-row"><div><b>${t.topic}</b><small>${t.answered} questões • ${t.active} aluno(s)</small></div><div class="teacher-mini-bar"><span style="width:${t.accuracy}%"></span></div><strong>${t.accuracy}%</strong></div>`).join(""):'<div class="teacher-empty">Ainda não há dados suficientes para gerar um diagnóstico.</div>'}</section><section class="menu-panel"><div class="teacher-section-title"><h3>🏆 Destaques</h3><span class="teacher-badge">XP</span></div>${topStudents.length?topStudents.slice(0,5).map((u,i)=>`<div class="teacher-student-card"><span class="teacher-avatar">${i+1}</span><div><b>${u.name}</b><small>${u.answered||0} questões • ${u.correct||0} acertos</small></div><strong>${u.score||0} XP</strong></div>`).join(""):'<div class="teacher-empty">Nenhum aluno com dados de progresso ainda.</div>'}</section></div>`;
  }
- else if(tab==="students") body=`<section class="menu-panel full"><div class="teacher-section-title"><h3>👥 Alunos ${selectedClass?'— '+selectedClass.name:''}</h3><span class="teacher-badge">${students.length} ALUNOS</span></div><div class="teacher-table">${topStudents.length?topStudents.map((u,i)=>{const a=u.answered?Math.round((u.correct||0)/u.answered*100):0;return `<div class="teacher-row"><span>${i+1}</span><b>${u.name}</b><small>${u.answered||0} questões</small><strong>${a}%</strong><em>${u.score||0} XP</em>${u.supabaseId?`<button class="secondary-btn" type="button" onclick="viewStudentProfile('${u.supabaseId}')">Ver perfil</button><button class="secondary-btn" type="button" onclick="transferStudent('${u.supabaseId}')">🔄 Transferir</button>`:''}</div>`}).join(""):'<div class="teacher-empty">Nenhum aluno entrou nesta turma ainda.</div>'}</div></section>`;
+ else if(tab==="students") body=`<section class="menu-panel full"><div class="teacher-section-title"><h3>👥 Alunos ${selectedClass?'— '+selectedClass.name:''}</h3><span class="teacher-badge">${students.length} ALUNOS</span></div><div class="teacher-table">${topStudents.length?topStudents.map((u,i)=>{const a=u.answered?Math.round((u.correct||0)/u.answered*100):0;return `<div class="teacher-row"><span>${i+1}</span><b>${u.name}</b><small>${u.answered||0} questões</small><strong>${a}%</strong><em>${u.score||0} XP</em>${u.supabaseId?`<button class="secondary-btn" type="button" onclick="viewStudentProfile('${u.supabaseId}')">Ver perfil</button><button class="secondary-btn teacher-transfer-btn" type="button" onclick="transferStudent('${u.supabaseId}')">Transferir</button>`:''}</div>`}).join(""):'<div class="teacher-empty">Nenhum aluno entrou nesta turma ainda.</div>'}</div></section>`;
  else if(tab==="contents") {
    const practicedTopics=topics.filter(t=>t.answered>0);
    const contentQuestions=topics.reduce((n,t)=>n+t.answered,0);
