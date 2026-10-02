@@ -303,7 +303,7 @@ to{opacity:1;transform:translateY(0)}}
 
 <style>
 .adaptive-banner{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:14px 0;padding:16px 18px;border:1px solid #1f6b49;border-radius:15px;background:linear-gradient(135deg,#09291c,#071b14);box-shadow:0 10px 28px rgba(0,0,0,.18)}.adaptive-banner b,.adaptive-banner small{display:block}.adaptive-banner b{margin:4px 0;font-size:15px}.adaptive-banner small{color:#8fa99d}.adaptive-kicker{font-size:10px;color:#64f0a5;font-weight:900;letter-spacing:.8px}.topic-progress,.mastery-bar{height:6px;background:#0c2b1e;border-radius:99px;overflow:hidden}.topic-progress{margin-top:9px}.topic-progress span,.mastery-bar span{display:block;height:100%;background:linear-gradient(90deg,#1ddf82,#8affc0);border-radius:99px}.topic-accuracy{display:block;color:#8ea99d;margin-top:5px;font-size:10px}.performance-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0}.performance-kpis>div{padding:15px;border:1px solid #173f30;border-radius:13px;background:#061b13;text-align:center}.performance-kpis b{display:block;font-size:23px;color:#e1fff0}.performance-kpis small{color:#8ea99d;text-transform:uppercase;font-size:9px}.mastery-list{display:grid;gap:10px;margin-top:12px}.mastery-row{display:grid;grid-template-columns:minmax(160px,1.1fr) 2fr 55px;align-items:center;gap:12px;padding:11px;border-radius:11px;background:#061b13;border:1px solid #12382b}.mastery-row b,.mastery-row small{display:block}.mastery-row small{color:#809d90;font-size:10px;margin-top:3px}.mastery-row>strong{text-align:right;color:#66f2a7}.focus-topic{margin:14px 0;padding:14px;border:1px solid #205c42;background:#08291c;border-radius:11px;font-weight:900}.focus-topic span{display:block;color:#8fa99d;font-size:10px;margin-top:4px;font-weight:600}.mastery-chip{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;background:#0d2b20;border:1px solid #1d5a40;color:#8ff5be;font-size:9px;font-weight:900;margin-top:5px}.adaptive-note{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:#08271b;border:1px solid #174d36;color:#9bc4b0;font-size:11px;line-height:1.45}
-.teacher-demo{font-size:9px;padding:6px 9px;border-radius:99px;border:1px solid #725f20;color:#f5d96a;background:#2a2510;font-weight:900}.teacher-table{display:grid;gap:7px;margin-top:12px}.teacher-row{display:grid;grid-template-columns:35px minmax(120px,1fr) 100px 70px 80px max-content;gap:8px;align-items:center;padding:11px;border:1px solid #153c2d;background:#061b13;border-radius:10px}.teacher-row .secondary-btn{white-space:nowrap;min-width:110px}.teacher-row small{color:#8da99c}.teacher-row strong{color:#67efa7}.teacher-row em{font-style:normal;color:#f5d65d;text-align:right}@media(max-width:760px){.adaptive-banner{align-items:flex-start;flex-direction:column}.performance-kpis{grid-template-columns:repeat(2,1fr)}.mastery-row{grid-template-columns:1fr 70px}.mastery-row .mastery-bar{grid-column:1/-1}.teacher-row{grid-template-columns:25px minmax(0,1fr) 55px}.teacher-row small,.teacher-row em{display:none}.teacher-row .secondary-btn{grid-column:2/-1;justify-self:start;min-width:110px}}
+.teacher-demo{font-size:9px;padding:6px 9px;border-radius:99px;border:1px solid #725f20;color:#f5d96a;background:#2a2510;font-weight:900}.teacher-table{display:grid;gap:7px;margin-top:12px}.teacher-row{display:grid;grid-template-columns:35px minmax(230px,1fr) 70px 90px max-content max-content;gap:12px;align-items:center;padding:13px 11px;border:1px solid #153c2d;background:#061b13;border-radius:10px}.teacher-student-info{display:grid;gap:4px;min-width:0}.teacher-student-info b{font-size:16px}.teacher-row .secondary-btn{white-space:nowrap;min-width:110px}.teacher-row small{color:#8da99c}.teacher-row .teacher-class-info{color:#67efa7;font-size:12px;line-height:1.35;white-space:normal}.teacher-row strong{color:#67efa7}.teacher-row em{font-style:normal;color:#f5d65d;text-align:right;white-space:nowrap}@media(max-width:760px){.adaptive-banner{align-items:flex-start;flex-direction:column}.performance-kpis{grid-template-columns:repeat(2,1fr)}.mastery-row{grid-template-columns:1fr 70px}.mastery-row .mastery-bar{grid-column:1/-1}.teacher-row{grid-template-columns:25px minmax(0,1fr) 55px}.teacher-row em{display:none}.teacher-row .secondary-btn{grid-column:2/-1;justify-self:start;min-width:110px}.teacher-row .teacher-class-info{font-size:11px}}
 /* MENU UNIVERSAL TAMBEM NA PAGINA DE AULAS */
 .game-dashboard.menu-only{
   display:block!important;
@@ -1421,6 +1421,7 @@ try{
       <div><label for="loginEmail">E-mail</label><input id="loginEmail" type="email" autocomplete="email" placeholder="aluno@email.com" required></div>
       <div><label for="loginPassword">Senha</label><div class="password-field"><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Sua senha" required><button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)" aria-label="Mostrar senha">👁️</button></div></div>
       <div id="loginError" class="auth-error"></div>
+      <button id="resendConfirmationBtn" class="secondary-btn app-hidden" type="button" onclick="resendConfirmationEmail()" style="width:100%;margin-top:-4px;border-color:#1ee89a;color:#8fffd0">📧 Reenviar e-mail de confirmação</button>
       <button class="auth-submit" type="submit">Entrar</button>
     </form>
 
@@ -4017,6 +4018,41 @@ function showAuth(mode){
 function authMessage(id,msg){
   const el=document.getElementById(id); el.textContent=msg; el.classList.add("show");
 }
+
+let resendConfirmationBusy=false;
+let resendConfirmationTimer=null;
+
+async function resendConfirmationEmail(){
+  if(resendConfirmationBusy) return;
+  const email=normalizeEmail(document.getElementById("loginEmail")?.value||"");
+  if(!email){ authMessage("loginError","Digite seu e-mail para reenviar a confirmação."); return; }
+  const btn=document.getElementById("resendConfirmationBtn");
+  resendConfirmationBusy=true;
+  if(btn){ btn.disabled=true; btn.textContent="📨 Enviando..."; }
+  try{
+    const {error}=await supabaseClient.auth.resend({
+      type:"signup", email,
+      options:{emailRedirectTo:window.location.origin+window.location.pathname}
+    });
+    if(error) throw error;
+    authMessage("loginError","E-mail de confirmação reenviado! Verifique sua caixa de entrada e a pasta de spam.");
+    if(btn){
+      let seconds=60; btn.textContent=`📧 Reenviar novamente (${seconds}s)`;
+      resendConfirmationTimer=setInterval(()=>{
+        seconds--;
+        if(seconds<=0){
+          clearInterval(resendConfirmationTimer); resendConfirmationTimer=null; resendConfirmationBusy=false;
+          btn.disabled=false; btn.textContent="📧 Reenviar e-mail de confirmação";
+        }else btn.textContent=`📧 Reenviar novamente (${seconds}s)`;
+      },1000);
+    }else resendConfirmationBusy=false;
+  }catch(err){
+    console.error("Reenvio do e-mail de confirmação:",err); resendConfirmationBusy=false;
+    if(btn){ btn.disabled=false; btn.textContent="📧 Reenviar e-mail de confirmação"; }
+    const msg=String(err?.message||"").toLowerCase();
+    authMessage("loginError",(msg.includes("rate limit")||msg.includes("too many"))?"Limite de envio atingido. Aguarde um pouco antes de tentar novamente.":"Não foi possível reenviar o e-mail de confirmação. Verifique o endereço e tente novamente.");
+  }
+}
 function selectAvatar(btn){
   document.querySelectorAll(".avatar-choice").forEach(b=>b.classList.remove("selected"));
   btn.classList.add("selected");
@@ -4087,7 +4123,10 @@ async function login(event){
         enterApp(); return;
       }
       const msg=(error.message||"").toLowerCase();
-      authMessage("loginError",msg.includes("email not confirmed")?"Confirme seu e-mail antes de entrar.":"E-mail ou senha incorretos.");
+      const notConfirmed=msg.includes("email not confirmed") || msg.includes("email_not_confirmed");
+      authMessage("loginError",notConfirmed?"Confirme seu e-mail antes de entrar.":"E-mail ou senha incorretos.");
+      const resend=document.getElementById("resendConfirmationBtn");
+      if(resend) resend.classList.toggle("app-hidden",!notConfirmed);
       return;
     }
     const user=data.user; if(!user){authMessage("loginError","Não foi possível entrar.");return;}
@@ -4466,52 +4505,13 @@ const lessons={
 ]
 },
 "8º ano":{
-"Conjunto dos Números Racionais":[
- {title:"Números racionais (Prof.1)",desc:"Introdução ao conjunto dos números racionais.",url:"https://www.youtube.com/embed/4yxQu7p1MGs"},
- {title:"Números racionais (Prof.2)",desc:"Continuação do estudo dos números racionais.",url:"https://www.youtube.com/embed/NYAeWhz53NM"},
- {title:"Números racionais (Prof.3)",desc:"Aprofundamento do estudo dos números racionais.",url:"https://www.youtube.com/embed/1JT_0FyzPzA"},
- {title:"Operação com números racionais: Adição e Subtração(Prof.1)",desc:"Adição e subtração com números racionais.",url:"https://www.youtube.com/embed/VSL4_jWMj1A"},
- {title:"Operação com números racionais: Adição e Subtração(Prof.2)",desc:"Continuação das operações de adição e subtração.",url:"https://www.youtube.com/embed/D9UwFHUI-f4"},
- {title:"Operação com números racionais: Multiplicação e Divisão com frações(Prof.1)",desc:"Multiplicação e divisão de números racionais na forma fracionária.",url:"https://www.youtube.com/embed/WsWRpp35Uhc"},
- {title:"Operação com números racionais: Multiplicação com frações(Prof.2)",desc:"Aprofundamento da multiplicação com frações.",url:"https://www.youtube.com/embed/vNycnO1FWJs"},
- {title:"Operação com números racionais: Divisão com frações(Prof.2)",desc:"Aprofundamento da divisão com frações.",url:"https://www.youtube.com/embed/-NhBUNJxnio"},
- {title:"MMC e MDC (Prof.1)",desc:"Introdução ao MMC e ao MDC.",url:"https://www.youtube.com/embed/Yq6L_iTaBXg"},
- {title:"MMC e MDC (Prof.2)",desc:"Continuação do estudo de MMC e MDC.",url:"https://www.youtube.com/embed/LoiM5d7Kors"},
- {title:"MMC e MDC: Qual utilizar?",desc:"Como identificar quando utilizar MMC ou MDC.",url:"https://www.youtube.com/embed/La_EvMyv1lQ"},
- {title:"Dízima Periódica e Fração Geratriz (Prof.1)",desc:"Relação entre dízimas periódicas e frações geratrizes.",url:"https://www.youtube.com/embed/hMmPidxIDiw"},
- {title:"Dízima Periódica e Fração Geratriz (Prof.2)",desc:"Continuação do estudo de dízimas periódicas e fração geratriz.",url:"https://www.youtube.com/embed/CPOfFghUEaw"}
+"Potenciação e radiciação":[
+ {title:"Aula 1 — Conceitos",desc:"Potenciação e radiciação no Ensino Fundamental.",url:"https://www.youtube.com/embed/Za7FA-D_C0w"},
+ {title:"Aula 2 — Exemplos",desc:"Aplicação das propriedades em exercícios.",url:"https://www.youtube.com/embed/Za7FA-D_C0w"}
 ],
-"Potenciação, Radiciação e Notação Científica":[
- {title:"Potenciação: Definição e Propriedades (Prof.1)",desc:"Definição e propriedades da potenciação.",url:"https://www.youtube.com/embed/4Vfw1XiHTpM"},
- {title:"Potenciação: Propriedades (Prof.2)",desc:"Continuação das propriedades da potenciação.",url:"https://www.youtube.com/embed/FzkAWvOAEUI"},
- {title:"Potenciação: Propriedades (Prof.3)",desc:"Aprofundamento das propriedades da potenciação.",url:"https://www.youtube.com/embed/WNG0UkUSoWY"},
- {title:"Radiciação: Definição e Propriedades (Prof.1)",desc:"Definição e propriedades da radiciação.",url:"https://www.youtube.com/embed/QmIjZgKhAEo"},
- {title:"Radiciação: Propriedades (Prof.2)",desc:"Propriedades dos radicais e suas aplicações.",url:"https://www.youtube.com/embed/494171csjuw"},
- {title:"Potenciação e Radiciação com radicais (Prof.2)",desc:"Operações envolvendo potenciação e radiciação com radicais.",url:"https://www.youtube.com/embed/uqZuvrV7cEs"},
- {title:"Notação Científica (Prof.1)",desc:"Representação de números muito grandes e muito pequenos.",url:"https://www.youtube.com/embed/tMOqp1Rqr0E"},
- {title:"Notação Científica (Prof.2)",desc:"Operações e aplicações da notação científica.",url:"https://www.youtube.com/embed/2C4T0qfs_o8"},
- {title:"Notação Científica (Prof.3)",desc:"Aprofundamento da notação científica.",url:"https://www.youtube.com/embed/PebTiUSshPQ"},
- {title:"Notação Científica (Prof.4)",desc:"Continuação dos estudos de notação científica.",url:"https://www.youtube.com/embed/MQQJ-lxftro"}
-],
-"Expressões Algébricas, Produtos Notáveis e Fatoração":[
- {title:"Expressões Algébricas: Definição (Prof.1)",desc:"Introdução às expressões algébricas.",url:"https://www.youtube.com/embed/i7MZpiRht2E"},
- {title:"Expressões Algébricas: Definição (Prof.2)",desc:"Continuação do estudo das expressões algébricas.",url:"https://www.youtube.com/embed/MauV62jWBSI"},
- {title:"Expressões Algébricas: Fatoração (Prof.3)",desc:"Técnicas de fatoração de expressões algébricas.",url:"https://www.youtube.com/embed/3amBZupsIdc"},
- {title:"Expressões Algébricas: Fatoração (Prof.4)",desc:"Aprofundamento das técnicas de fatoração.",url:"https://www.youtube.com/embed/hgr3iNJdLzE"},
- {title:"Produtos Notáveis (Prof.1)",desc:"Principais produtos notáveis e suas aplicações.",url:"https://www.youtube.com/embed/_3YQvVKbqn0"},
- {title:"Produtos Notáveis (Prof.2)",desc:"Continuação dos produtos notáveis.",url:"https://www.youtube.com/embed/C_dLST3fa6s"},
- {title:"Produtos Notáveis (Prof.3)",desc:"Aprofundamento dos produtos notáveis.",url:"https://www.youtube.com/embed/UECy1XbL6w8"}
-],
-"Equações e Sistemas":[],
-"Razão, Proporção e Porcentagem":[],
-"Matemática Financeira":[],
-"Sequências e Regularidades":[],
-"Geometria: Ângulos, Polígonos, Triângulos e Quadriláteros":[],
-"Teorema de Pitágoras, Áreas, Perímetros e Volumes":[
- {title:"Teorema de Pitágoras",desc:"Aplicações do Teorema de Pitágoras em problemas geométricos.",url:"https://www.youtube.com/embed/5AQu6XTFgXs"}
-],
-"Transformações Geométricas":[],
-"Estatística e Probabilidade":[]
+"Teorema de Pitágoras":[
+ {title:"Aula 1 — Conceito",desc:"Compreendendo a relação entre os lados do triângulo retângulo.",url:"https://www.youtube.com/embed/Za7FA-D_C0w"}
+]
 },
 "9º ano":{
 "Conjunto dos Números Reais":[
@@ -4726,19 +4726,6 @@ const lessonMeta={
 };
 
 const lessonCatalog={
- "8º ano":[
-  ["Conjunto dos Números Racionais","Números racionais, operações, MMC, MDC e fração geratriz"],
-  ["Potenciação, Radiciação e Notação Científica","Propriedades, operações com radicais e representação científica"],
-  ["Expressões Algébricas, Produtos Notáveis e Fatoração","Expressões, produtos notáveis e técnicas de fatoração"],
-  ["Equações e Sistemas","Equações do 1º grau e sistemas de equações"],
-  ["Razão, Proporção e Porcentagem","Razão, proporção, porcentagem e aplicações"],
-  ["Matemática Financeira","Juros simples e aplicações financeiras"],
-  ["Sequências e Regularidades","Padrões, sequências numéricas e regularidades"],
-  ["Geometria: Ângulos, Polígonos, Triângulos e Quadriláteros","Elementos e propriedades das figuras geométricas"],
-  ["Teorema de Pitágoras, Áreas, Perímetros e Volumes","Medidas, áreas, perímetros, volumes e Teorema de Pitágoras"],
-  ["Transformações Geométricas","Translação, rotação, reflexão, ampliação e redução"],
-  ["Estatística e Probabilidade","Dados, gráficos, estatística, probabilidade e contagem"]
- ],
  "9º ano":[
   ["Conjunto dos Números Reais","Racionais, irracionais, classificação e representação na reta numérica"],
   ["Potenciação, Notação Científica e Radiciação","Potências, propriedades, notação científica e operações com radicais"],
@@ -4754,17 +4741,6 @@ const lessonCatalog={
 };
 
 const lessonPracticeMap={
- "Conjunto dos Números Racionais":["Conjunto dos Números Racionais","Fração geratriz","Frações e decimais","Múltiplos e divisores"],
- "Potenciação, Radiciação e Notação Científica":["Potenciação e radiciação","Potenciação","Radiciação","Notação científica"],
- "Expressões Algébricas, Produtos Notáveis e Fatoração":["Expressões algébricas","Fatoração","Produtos notáveis"],
- "Equações e Sistemas":["Equações","Sistemas de equações"],
- "Razão, Proporção e Porcentagem":["Razão e proporção","Proporcionalidade","Porcentagem"],
- "Matemática Financeira":["Juros simples"],
- "Sequências e Regularidades":["Sequências e Regularidades"],
- "Geometria: Ângulos, Polígonos, Triângulos e Quadriláteros":["Geometria","Ângulos","Triângulos","Quadriláteros"],
- "Teorema de Pitágoras, Áreas, Perímetros e Volumes":["Teorema de Pitágoras","Áreas","Perímetros","Volume e Medidas"],
- "Transformações Geométricas":["Transformações geométricas"],
- "Estatística e Probabilidade":["Estatística e probabilidade","Estatística","Probabilidade e princípio de contagem"],
  "Conjunto dos Números Reais":["Conjunto dos Números Reais"],
  "Potenciação, Notação Científica e Radiciação":["Potenciação, Notação Científica e Radiciação"],
  "Fatoração Algébrica e Produtos Notáveis":["Fatoração Algébrica e Produtos Notáveis"],
@@ -5199,6 +5175,12 @@ function renderExercises(year){
    <div><h3>📝 Exercícios — ${year}</h3><div class="muted">Escolha um conteúdo para começar sua prática.</div></div>
  </div>
  <div class="adaptive-banner"><div><span class="adaptive-kicker">🧠 RECOMENDAÇÃO PERSONALIZADA</span><b>Pratique agora: ${recommendedTopic()||"um conteúdo"}</b><small>O sistema prioriza conteúdos com menor aproveitamento ou ainda pouco praticados.</small></div><button class="action-btn" type="button" onclick="startRecommendedPractice()">Praticar recomendação →</button></div>
+ <div class="menu-panel" style="margin:14px 0;border:1px solid rgba(109,224,154,.22);background:linear-gradient(135deg,rgba(31,91,59,.24),rgba(8,24,18,.42))">
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+     <div><span class="adaptive-kicker">🎯 SIMULADOS</span><h3 style="margin:4px 0">Simulado de Matemática — ${year}</h3><p class="muted" style="margin:0">20 questões sorteadas entre os conteúdos do seu ano, em estilo de avaliação.</p></div>
+     <button class="action-btn" type="button" onclick="startSimulation()">▶ Fazer simulado</button>
+   </div>
+ </div>
  <div class="exercise-topic-grid">
    ${topics.map((t,i)=>{
       const grouped=year==="9º ano";
@@ -5224,6 +5206,8 @@ function renderExercises(year){
  <div id="quizArea"></div>`;
 }
 
+let currentSimulation = false;
+let simulationYear = null;
 let activityReturnToClass = false;
 let currentAssignedActivity = null;
 let currentActivityAnswered = 0;
@@ -5234,6 +5218,7 @@ let currentActivityAnswers = [];
 let mathMapReturnIndex = null;
 
 function backFromExerciseTopic(){
+ if(currentSimulation){ exitSimulation(); return; }
  if(mathMapReturnIndex !== null){
    const idx = mathMapReturnIndex;
    mathMapReturnIndex = null;
@@ -5982,6 +5967,32 @@ async function viewStudentActivityAnswers(code, alunoId){
    </div>`;
  }catch(err){ console.warn("Detalhes da atividade:",err); alert(err?.message||"Não foi possível carregar os detalhes."); }
 }
+
+function normalizedProgressMetrics(source){
+  const p=source||{};
+  const topics=p.estatisticas_conteudos&&typeof p.estatisticas_conteudos==="object"?p.estatisticas_conteudos:{};
+  let topicAnswered=0, topicCorrect=0;
+  Object.values(topics).forEach(v=>{
+    if(!v||typeof v!=="object") return;
+    topicAnswered += Number(v.respondidas??v.answered??v.questoes??0)||0;
+    topicCorrect += Number(v.acertos??v.correct??0)||0;
+  });
+  let answered=Number(p.questoes_respondidas||0)||0;
+  let correct=Number(p.acertos||0)||0;
+  const xp=Number(p.xp||0)||0;
+  // As estatísticas por conteúdo são a fonte confiável para o que o aluno realmente respondeu.
+  // Se não há nenhuma estatística e o aluno também não tem XP/acertos, um valor antigo
+  // em questoes_respondidas não pode ser tratado como questões realizadas.
+  if(topicAnswered>0){
+    answered=topicAnswered;
+    correct=topicCorrect;
+  }else if(xp===0 && correct===0){
+    answered=0;
+    correct=0;
+  }
+  return {answered,correct,xp};
+}
+
 async function viewStudentProfile(alunoId){
  if(!currentUser?.supabaseId){ alert("O perfil individual fica disponível quando o professor está conectado ao Supabase."); return; }
  try{
@@ -5992,7 +6003,8 @@ async function viewStudentProfile(alunoId){
    const prog=payload?.progresso||{};
    const turmas=Array.isArray(payload?.turmas)?payload.turmas:[];
    const atividades=Array.isArray(payload?.atividades)?payload.atividades:[];
-   const xp=Number(prog.xp||0), q=Number(prog.questoes_respondidas||0), ac=Number(prog.acertos||0);
+   const metrics=normalizedProgressMetrics(prog);
+   const xp=metrics.xp, q=metrics.answered, ac=metrics.correct;
    const pct=q?Math.round(ac/q*100):0;
    const nivel=Math.floor(xp/100)+1;
    const atividadesConcluidas=atividades.filter(a=>a.status==='Concluída');
@@ -6092,6 +6104,13 @@ async function renderTeacherDashboard(){
    }catch(err){ console.warn("Falha ao carregar turmas do professor:",err); }
  }
  const selectedClass=teacherSelectedClass==='ALL'?null:(classes.find(c=>c.code===teacherSelectedClass)||classes[0]||null);
+ // Mapeia cada aluno para a turma real a partir dos vínculos carregados no Supabase.
+ const studentClassMap=new Map();
+ classes.forEach(c=>{
+   (Array.isArray(c.members)?c.members:[]).forEach(m=>{
+     if(m?.id) studentClassMap.set(String(m.id),{name:c.name||'',code:c.code||''});
+   });
+ });
  window.__teacherClasses=classes;
  let students=[];
 
@@ -6117,9 +6136,9 @@ async function renderTeacherDashboard(){
              name:m.aluno_nome||"Aluno",
              avatar:m.aluno_avatar||"🧑‍🎓",
              score:Number(m.aluno_xp||0) || Number(local?.score||0),
-             answered:Number(local?.answered||0),
-             correct:Number(local?.correct||0),
-             topicStats:local?.topicStats||{},
+             answered:normalizedProgressMetrics({questoes_respondidas:m.questoes_respondidas,acertos:m.acertos,estatisticas_conteudos:m.estatisticas_conteudos||local?.topicStats||{}}).answered,
+             correct:normalizedProgressMetrics({questoes_respondidas:m.questoes_respondidas,acertos:m.acertos,estatisticas_conteudos:m.estatisticas_conteudos||local?.topicStats||{}}).correct,
+             topicStats:m.estatisticas_conteudos||local?.topicStats||{},
              email:local?.email||""
            };
          });
@@ -6143,13 +6162,14 @@ async function renderTeacherDashboard(){
                const key=String(r.aluno_id||"");
                const s=byStudent.get(key);
                if(!s) return;
-               const q=Number(r.questoes_respondidas||0);
-               const a=Number(r.acertos||0);
                const xpAluno=Number(r.aluno_xp||0);
+               const rowMetrics=normalizedProgressMetrics(r);
                if(xpAluno>s.score) s.score=xpAluno;
-               if(q>s.answered){
-                 s.answered=q;
-                 s.correct=a;
+               if(rowMetrics.answered>=s.answered){
+                 s.answered=rowMetrics.answered;
+                 s.correct=rowMetrics.correct;
+               }else if(s.correct===0 && rowMetrics.correct>0){
+                 s.correct=rowMetrics.correct;
                }
                if(r.estatisticas_conteudos && typeof r.estatisticas_conteudos==="object"){
                  s.topicStats=r.estatisticas_conteudos;
@@ -6193,10 +6213,12 @@ async function renderTeacherDashboard(){
          name:m.aluno_nome||"Aluno",
          avatar:m.aluno_avatar||"🧑‍🎓",
          score:Number(m.aluno_xp||0),
-         answered:Number(m.questoes_respondidas||0),
-         correct:Number(m.acertos||0),
+         answered:normalizedProgressMetrics(m).answered,
+         correct:normalizedProgressMetrics(m).correct,
          topicStats:m.estatisticas_conteudos||{},
-         email:""
+         email:"",
+         turmaName:selectedClass?.name||"",
+         turmaCode:selectedClass?.code||""
        }));
      } else if(cloudError){
        console.warn("RPC professor_alunos_turma não disponível:",cloudError);
@@ -6215,10 +6237,23 @@ async function renderTeacherDashboard(){
        answered:Number(local?.answered||0),
        correct:Number(local?.correct||0),
        topicStats:local?.topicStats||{},
-       email:local?.email||""
+       email:local?.email||"",
+       turmaName:selectedClass?.name||studentClassMap.get(String(m.id||""))?.name||"",
+       turmaCode:selectedClass?.code||studentClassMap.get(String(m.id||""))?.code||""
      });
    });
  }
+ // Garante que a turma apareça em cada aluno, inclusive em "Todas as turmas".
+ students.forEach(u=>{
+   const mapped=studentClassMap.get(String(u.supabaseId||""));
+   if(selectedClass){
+     u.turmaName=selectedClass.name||u.turmaName||"";
+     u.turmaCode=selectedClass.code||u.turmaCode||"";
+   }else if(mapped){
+     u.turmaName=mapped.name||u.turmaName||"";
+     u.turmaCode=mapped.code||u.turmaCode||"";
+   }
+ });
  const total=students.reduce((n,u)=>n+(u.answered||0),0),correct=students.reduce((n,u)=>n+(u.correct||0),0),xp=students.reduce((n,u)=>n+(u.score||0),0);
  const avg=total?Math.round(correct/total*100):0; const active=students.filter(u=>(u.answered||0)>0).length;
  const topics=teacherTopicData(year,students); const weak=topics.filter(t=>t.answered>0).slice(0,4); const topStudents=[...students].sort((a,b)=>(b.score||0)-(a.score||0));
@@ -6254,7 +6289,7 @@ async function renderTeacherDashboard(){
    ${!selectedClass && !classes.length?`<div class="teacher-alert">💡 Crie uma turma para começar a acompanhar alunos por código.</div>`:''}
    <div class="teacher-content-grid"><section class="menu-panel"><div class="teacher-section-title"><h3>📈 Conteúdos que merecem atenção</h3><span class="teacher-badge">DIAGNÓSTICO</span></div>${weak.length?weak.map(t=>`<div class="teacher-topic-row"><div><b>${t.topic}</b><small>${t.answered} questões • ${t.active} aluno(s)</small></div><div class="teacher-mini-bar"><span style="width:${t.accuracy}%"></span></div><strong>${t.accuracy}%</strong></div>`).join(""):'<div class="teacher-empty">Ainda não há dados suficientes para gerar um diagnóstico.</div>'}</section><section class="menu-panel"><div class="teacher-section-title"><h3>🏆 Destaques</h3><span class="teacher-badge">XP</span></div>${topStudents.length?topStudents.slice(0,5).map((u,i)=>`<div class="teacher-student-card"><span class="teacher-avatar">${i+1}</span><div><b>${u.name}</b><small>${u.answered||0} questões • ${u.correct||0} acertos</small></div><strong>${u.score||0} XP</strong></div>`).join(""):'<div class="teacher-empty">Nenhum aluno com dados de progresso ainda.</div>'}</section></div>`;
  }
- else if(tab==="students") body=`<section class="menu-panel full"><div class="teacher-section-title"><h3>👥 Alunos ${selectedClass?'— '+selectedClass.name:''}</h3><span class="teacher-badge">${students.length} ALUNOS</span></div><div class="teacher-table">${topStudents.length?topStudents.map((u,i)=>{const a=u.answered?Math.round((u.correct||0)/u.answered*100):0;return `<div class="teacher-row"><span>${i+1}</span><b>${u.name}</b><small>${u.answered||0} questões</small><strong>${a}%</strong><em>${u.score||0} XP</em>${u.supabaseId?`<button class="secondary-btn" type="button" onclick="viewStudentProfile('${u.supabaseId}')">Ver perfil</button><button class="secondary-btn teacher-transfer-btn" type="button" onclick="transferStudent('${u.supabaseId}')">Transferir</button>`:''}</div>`}).join(""):'<div class="teacher-empty">Nenhum aluno entrou nesta turma ainda.</div>'}</div></section>`;
+ else if(tab==="students") body=`<section class="menu-panel full"><div class="teacher-section-title"><h3>👥 Alunos ${selectedClass?'— '+selectedClass.name:''}</h3><span class="teacher-badge">${students.length} ALUNOS</span></div><div class="teacher-table">${topStudents.length?topStudents.map((u,i)=>{const a=u.answered?Math.round((u.correct||0)/u.answered*100):0;const turmaLabel=u.turmaName||"Sem turma";const turmaCode=u.turmaCode||"";return `<div class="teacher-row"><span>${i+1}</span><div class="teacher-student-info"><b>${u.name}</b><small class="teacher-class-info">🏫 ${turmaLabel}${turmaCode?` • ${turmaCode}`:''}</small><small>${u.answered||0} questões</small></div><strong>${a}%</strong><em>${u.score||0} XP</em>${u.supabaseId?`<button class="secondary-btn" type="button" onclick="viewStudentProfile('${u.supabaseId}')">Ver perfil</button><button class="secondary-btn teacher-transfer-btn" type="button" onclick="transferStudent('${u.supabaseId}')">Transferir</button>`:''}</div>`}).join(""):'<div class="teacher-empty">Nenhum aluno entrou nesta turma ainda.</div>'}</div></section>`;
  else if(tab==="contents") {
    const practicedTopics=topics.filter(t=>t.answered>0);
    const contentQuestions=topics.reduce((n,t)=>n+t.answered,0);
@@ -7258,6 +7293,50 @@ function resetQuizTracking(){
  currentActivityXP=0;
  currentActivityAnswers=[];
 }
+function startSimulation(){
+ const year=isProfessor()?teacherContextYear():(currentUser?.year||"6º ano");
+ const source=questionBank?.[year]||{};
+ let pool=[];
+ Object.entries(source).forEach(([topic,items])=>{
+   (items||[]).forEach(q=>{ if(q && q.q && Array.isArray(q.a) && q.a.length===4) pool.push({...q,__simulationTopic:topic}); });
+ });
+ // Mantém compatibilidade com o banco legado caso algum conteúdo ainda não tenha banco novo.
+ if(!pool.length){
+   Object.entries(quizzes||{}).forEach(([topic,q])=>{ if(q && q.q && Array.isArray(q.a)) pool.push({id:"LEGACY-SIM-"+topic,d:q.d||"Prática",h:q.h||"Aplicar o conteúdo estudado",q:q.q,a:q.a,c:q.c,e:q.e,__simulationTopic:topic}); });
+ }
+ if(!pool.length){ toast("Ainda não há questões suficientes para montar este simulado."); return; }
+ const total=Math.min(20,pool.length);
+ pool=shuffleArray(pool).slice(0,total);
+ currentSimulation=true;
+ simulationYear=year;
+ currentAssignedActivity=null;
+ activityReturnToClass=false;
+ mathMapReturnIndex=null;
+ currentQuizAdaptive=false;
+ quizPool=pool;
+ quizIndex=0;
+ resetQuizTracking();
+ const content=document.getElementById("content");
+ if(!content) return;
+ content.innerHTML=`<div class="exercise-topic-page">
+   <div class="topic-page-head">
+     <button class="secondary-btn" type="button" onclick="exitSimulation()">← Voltar aos exercícios</button>
+     <div class="topic-page-title"><div class="topic-page-art">🎯</div><div><span class="exercise-label">SIMULADO</span><h2>Simulado de Matemática — ${year}</h2><p>20 questões sorteadas do banco de questões do seu ano.</p></div></div>
+   </div>
+   <div id="quizArea"></div>
+ </div>`;
+ renderQuizQuestion("__SIMULADO__");
+}
+
+function exitSimulation(){
+ currentSimulation=false;
+ simulationYear=null;
+ quizPool=[]; quizIndex=0;
+ resetQuizTracking();
+ renderExercises(isProfessor()?teacherContextYear():(currentUser?.year||"6º ano"));
+}
+
+
 function getQuestionPool(topic){
  const year=isProfessor()?teacherContextYear():(currentUser?.year||"6º ano");
  const bank=questionBank[year]?.[topic];
@@ -7324,7 +7403,7 @@ function answer(btn,i,c){
  quizAnsweredIds.add(questionId);
  quizSkippedIds.delete(questionId);
  if(ok) quizWrongIds.delete(questionId); else quizWrongIds.add(questionId);
- if(currentAssignedActivity){
+ if(currentAssignedActivity || currentSimulation){
    currentActivityAnswered++;
    if(ok) currentActivityCorrect++;
    currentActivityXP += ok ? 10 : 3;
@@ -7339,7 +7418,7 @@ function answer(btn,i,c){
    });
  }
  addXP(ok?10:3,ok,currentQuizTopic());
- saveQuizProgress(currentQuizTopic());
+ if(!currentSimulation) saveQuizProgress(currentQuizTopic());
  if(ok){
    btn.classList.add("correct");
    box.className="feedback show ok";
@@ -7351,6 +7430,7 @@ function answer(btn,i,c){
    box.innerHTML=`<b>❌ Ainda não.</b> ${currentQuiz.e}<div style="margin-top:12px"><button class="action-btn" type="button" onclick="nextQuizQuestion()">Próxima questão →</button></div>`;
  }
 }
+
 function nextQuizQuestion(){
  const next=findNextUnansweredIndex();
  if(next===-1){
@@ -7405,6 +7485,16 @@ function finishQuizBlock(){
  if(!area) return;
  const total=quizPool.length;
  const skipped=quizSkippedIds.size;
+ if(currentSimulation){
+   const pct=total?Math.round((currentActivityCorrect/total)*100):0;
+   const correct=currentActivityCorrect;
+   const xp=currentActivityXP;
+   currentSimulation=false;
+   simulationYear=null;
+   clearQuizProgress(currentQuizTopic());
+   area.innerHTML=`<div class="quiz panel"><div class="question">🎉 Simulado concluído!</div><p class="muted"><b>${correct}</b> de <b>${total}</b> questões corretas • <b>${pct}%</b> de aproveitamento</p><p class="muted">⭐ ${xp} XP ganhos</p><div class="feedback show ${pct>=70?'ok':'bad'}"><b>${pct>=70?'👏 Muito bem!':'📚 Continue praticando!'}</b> Revise os conteúdos em que teve mais dificuldade e tente outro simulado depois.</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px"><button class="action-btn" type="button" onclick="startSimulation()">🔄 Novo simulado</button><button class="secondary-btn" type="button" onclick="renderExercises(isProfessor()?teacherContextYear():(currentUser?.year||'6º ano'))">← Voltar aos exercícios</button></div></div>`;
+   return;
+ }
  clearQuizProgress(currentQuizTopic());
  if(currentAssignedActivity){
    const pct=total?Math.round((currentActivityCorrect/total)*100):0;
@@ -7428,6 +7518,7 @@ function finishQuizBlock(){
 
 function currentQuizTopic(){
  const q=currentQuiz?.id||"";
+ if(currentSimulation && currentQuiz?.__simulationTopic) return currentQuiz.__simulationTopic;
  const topics=Object.entries(questionBank[currentUser?.year||"6º ano"]||{});
  for(const [topic,arr] of topics) if(arr.some(x=>x.id===q)) return topic;
  return Object.keys(quizzes).find(k=>quizzes[k]===currentQuiz)||"";
