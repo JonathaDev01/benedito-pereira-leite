@@ -5322,7 +5322,7 @@ async function openTeacherContextSelector(afterSelect=null){
           code:r.codigo_turma||""
         });
       });
-      classes=Array.from(byId.values());
+      classes=Array.from(byId.values()).filter(c=>c.year!=="8º ano" || ["BL-J88R6F","BL-62HD8J"].includes(String(c.code||"").toUpperCase()));
     }
   }catch(err){
     console.warn("Turmas para seleção do professor:",err);
@@ -5650,86 +5650,40 @@ async function createClass(event){
  await renderTeacherDashboard();
 }
 async function deleteClass(code){
- const cls=(window.__teacherClasses||[]).find(c=>String(c.code)===String(code))
-   || localClasses().find(c=>String(c.code)===String(code));
- if(!cls) return;
-
+ const cls=(window.__teacherClasses||[]).find(c=>String(c.code)===String(code)) || localClasses().find(c=>String(c.code)===String(code));
+ if(!cls){ alert("Não encontrei a turma selecionada."); return; }
  if(!confirm(`Excluir a turma "${cls.name}"?\n\nEssa ação não pode ser desfeita.`)) return;
 
- // No Supabase, sempre tentamos excluir a turma pelo ID real.
- // Não dependemos mais do ID ter formato UUID, pois a lista pode trazer
- // identificadores em formatos diferentes.
+ // A RPC espera o UUID real da turma. Algumas versões antigas podem guardar o código (BL-XXXXXX) no campo id.
  if(currentUser?.supabaseId){
    try{
-     let deleted=false;
-     let lastError=null;
+     let turmaId=cls.id;
+     const isUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(turmaId||""));
 
-     // Caminho principal: RPC criada para a exclusão segura da turma.
-     try{
-       const rpc=await supabaseClient.rpc("professor_excluir_turma",{p_turma_id:cls.id});
-       if(!rpc.error){
-         deleted=true;
-       }else{
-         lastError=rpc.error;
-       }
-     }catch(e){
-       lastError=e;
+     if(!isUuid){
+       const {data:rows,error:lookupError}=await supabaseClient.rpc("professor_todas_turmas");
+       if(lookupError) throw lookupError;
+       const match=(Array.isArray(rows)?rows:[]).find(r=>
+         String(r.codigo_turma||"").toUpperCase()===String(cls.code||code).toUpperCase()
+       );
+       if(!match?.turma_id) throw new Error("Não foi possível localizar o ID real da turma no Supabase.");
+       turmaId=match.turma_id;
      }
 
-     // Fallback: exclusão direta na tabela turmas, caso a RPC não exista
-     // ou esteja indisponível.
-     if(!deleted){
-       const {error}=await supabaseClient.from("turmas").delete().eq("id",cls.id);
-       if(error) throw error;
-       deleted=true;
-     }
-
-     if(!deleted){
-       throw lastError || new Error("Não foi possível excluir a turma.");
-     }
-
-     // Remove somente o espelho local depois que o Supabase confirmou.
-     saveLocalClasses(
-       localClasses().filter(c=>String(c.code)!==String(code))
-     );
-
-     if(teacherSelectedClass===code) teacherSelectedClass="ALL";
-
-     alert("Turma excluída com sucesso.");
-     await renderTeacherDashboard();
-     return;
-
+     const {data,error}=await supabaseClient.rpc("professor_excluir_turma",{p_turma_id:turmaId});
+     if(error) throw error;
+     if(data===false) throw new Error("O Supabase não confirmou a exclusão da turma.");
    }catch(err){
      console.error("Exclusão da turma no Supabase:",err);
-     alert(
-       `Não foi possível excluir a turma no Supabase.\n\n${err?.message||"Verifique as permissões da turma e tente novamente."}`
-     );
+     alert(err?.message||"Não foi possível excluir a turma no Supabase.");
      return;
    }
  }
-
- // Modo local somente quando não houver sessão Supabase.
- saveLocalClasses(
-   localClasses().filter(c=>String(c.code)!==String(code))
- );
- if(teacherSelectedClass===code) teacherSelectedClass="ALL";
+ saveLocalClasses(localClasses().filter(c=>String(c.code)!==String(code)));
+ if(String(teacherSelectedClass)===String(code)) teacherSelectedClass="ALL";
  alert("Turma excluída com sucesso.");
  await renderTeacherDashboard();
 }
-
-
-// Disponibiliza a função para os botões criados dinamicamente via onclick.
-window.deleteClass = deleteClass;
-
-
-document.addEventListener("click",function(e){
-  const btn=e.target.closest("[data-delete-class]");
-  if(!btn) return;
-  e.preventDefault();
-  e.stopPropagation();
-  const code=btn.getAttribute("data-delete-class");
-  if(code) deleteClass(code);
-});
 
 async function transferStudent(studentId){
  if(!currentUser?.supabaseId){ alert("A transferência de alunos está disponível quando o professor está conectado ao Supabase."); return; }
@@ -5769,6 +5723,7 @@ async function transferStudent(studentId){
    const targetClasses=cloudTargetClasses.filter(c=>
      c.id &&
      c.year===sourceYear &&
+     (c.year!=="8º ano" || ["BL-J88R6F","BL-62HD8J"].includes(String(c.code||"").toUpperCase())) &&
      String(c.code)!==currentCode
    );
    if(!targetClasses.length){ alert(`Não encontrei outras turmas do ${sourceYear} disponíveis para este professor.`); return; }
@@ -6051,61 +6006,52 @@ async function renderTeacherDashboard(){
  // O fallback local permanece para não quebrar o protótipo offline.
  if(currentUser?.supabaseId){
    try{
-     const allRpc=await supabaseClient.rpc("professor_todas_turmas");
-     if(allRpc.error) throw allRpc.error;
-
-     // A lista oficial vem de professor_todas_turmas para incluir também
-     // turmas sem alunos. Depois acrescentamos os membros disponíveis.
-     const byId=new Map();
-     (Array.isArray(allRpc.data)?allRpc.data:[]).forEach(r=>{
-       const key=String(r.turma_id||r.codigo_turma||"");
-       if(!key || byId.has(key)) return;
-       byId.set(key,{
-         id:r.turma_id,
-         name:r.turma_nome||"Turma",
-         year:`${r.ano_escolar}º ano`,
-         code:r.codigo_turma||"",
-         teacherEmail:currentUser?.email||"",
-         teacherName:currentUser?.name||"",
-         members:[]
+     const {data,error}=await supabaseClient.rpc("professor_minhas_turmas");
+     if(!error && Array.isArray(data)){
+       const byId=new Map();
+       data.forEach(r=>{
+         const key=r.turma_id;
+         if(!byId.has(key)) byId.set(key,{
+           id:r.turma_id,
+           name:r.turma_nome,
+           year:`${r.ano_escolar}º ano`,
+           code:r.codigo_turma,
+           teacherEmail:currentUser?.email||"",
+           teacherName:currentUser?.name||"",
+           members:[]
+         });
+         if(r.aluno_id) byId.get(key).members.push({id:r.aluno_id,name:r.aluno_nome,avatar:r.aluno_avatar,xp:Number(r.aluno_xp||0)});
        });
-     });
-
-     const membersRpc=await supabaseClient.rpc("professor_minhas_turmas");
-     if(!membersRpc.error && Array.isArray(membersRpc.data)){
-       membersRpc.data.forEach(r=>{
-         const key=String(r.turma_id||r.codigo_turma||"");
-         if(!key) return;
-         if(!byId.has(key)){
-           byId.set(key,{
-             id:r.turma_id,
-             name:r.turma_nome||"Turma",
-             year:`${r.ano_escolar}º ano`,
-             code:r.codigo_turma||"",
-             teacherEmail:currentUser?.email||"",
-             teacherName:currentUser?.name||"",
-             members:[]
-           });
-         }
-         if(r.aluno_id){
-           byId.get(key).members.push({
-             id:r.aluno_id,
-             name:r.aluno_nome,
-             avatar:r.aluno_avatar,
-             xp:Number(r.aluno_xp||0)
-           });
-         }
+       const cloudClasses=Array.from(byId.values());
+       const localForTeacher=localClasses().filter(c=>c.teacherEmail===currentUser?.email);
+       const merged=new Map();
+       [...cloudClasses,...localForTeacher].forEach(c=>{
+         const key=String(c.code||c.id);
+         if(!merged.has(key)) merged.set(key,c);
        });
+       classes=Array.from(merged.values()).filter(c=>c.year===year && (c.year!=="8º ano" || ["BL-J88R6F","BL-62HD8J"].includes(String(c.code||"").toUpperCase())));
+
+       // A quantidade exibida no cartão deve seguir o vínculo usado pelo cadastro/transferência
+       // dos alunos: profiles.codigo_turma. A tabela turma_alunos pode não estar preenchida
+       // em registros antigos, por isso não usamos professor_alunos_turma como fonte da contagem.
+       try{
+         const {data:counts,error:countError}=await supabaseClient.rpc("professor_contagem_alunos_turmas");
+         if(!countError && Array.isArray(counts)){
+           const countByCode=new Map(
+             counts.map(r=>[String(r.codigo_turma||"").toUpperCase(),Number(r.total_alunos||0)])
+           );
+           classes.forEach(c=>{
+             c.memberCount=countByCode.get(String(c.code||"").toUpperCase())||0;
+           });
+         }else if(countError){
+           console.warn("Contagem de alunos das turmas:",countError);
+         }
+       }catch(e){
+         console.warn("Atualização das quantidades das turmas:",e);
+       }
+     } else if(error){
+       console.warn("Turmas do professor no Supabase:",error);
      }
-
-     const cloudClasses=Array.from(byId.values());
-     const localForTeacher=localClasses().filter(c=>c.teacherEmail===currentUser?.email);
-     const merged=new Map();
-     [...cloudClasses,...localForTeacher].forEach(c=>{
-       const key=String(c.code||c.id);
-       if(!merged.has(key)) merged.set(key,c);
-     });
-     classes=Array.from(merged.values()).filter(c=>c.year===year);
    }catch(err){ console.warn("Falha ao carregar turmas do professor:",err); }
  }
  const selectedClass=teacherSelectedClass==='ALL'?null:(classes.find(c=>c.code===teacherSelectedClass)||classes[0]||null);
@@ -6271,7 +6217,23 @@ async function renderTeacherDashboard(){
    ${!selectedClass && !classes.length?`<div class="teacher-alert">💡 Crie uma turma para começar a acompanhar alunos por código.</div>`:''}
    <div class="teacher-content-grid"><section class="menu-panel"><div class="teacher-section-title"><h3>📈 Conteúdos que merecem atenção</h3><span class="teacher-badge">DIAGNÓSTICO</span></div>${weak.length?weak.map(t=>`<div class="teacher-topic-row"><div><b>${t.topic}</b><small>${t.answered} questões • ${t.active} aluno(s)</small></div><div class="teacher-mini-bar"><span style="width:${t.accuracy}%"></span></div><strong>${t.accuracy}%</strong></div>`).join(""):'<div class="teacher-empty">Ainda não há dados suficientes para gerar um diagnóstico.</div>'}</section><section class="menu-panel"><div class="teacher-section-title"><h3>🏆 Destaques</h3><span class="teacher-badge">XP</span></div>${topStudents.length?topStudents.slice(0,5).map((u,i)=>`<div class="teacher-student-card"><span class="teacher-avatar">${i+1}</span><div><b>${u.name}</b><small>${u.answered||0} questões • ${u.correct||0} acertos</small></div><strong>${u.score||0} XP</strong></div>`).join(""):'<div class="teacher-empty">Nenhum aluno com dados de progresso ainda.</div>'}</section></div>`;
  }
- else if(tab==="students") body=`<section class="menu-panel full"><div class="teacher-section-title"><h3>👥 Alunos ${selectedClass?'— '+selectedClass.name:''}</h3><span class="teacher-badge">${students.length} ALUNOS</span></div><div class="teacher-table">${topStudents.length?topStudents.map((u,i)=>{const a=u.answered?Math.round((u.correct||0)/u.answered*100):0;return `<div class="teacher-row"><span>${i+1}</span><b>${u.name}</b><small>${u.answered||0} questões</small><strong>${a}%</strong><em>${u.score||0} XP</em>${u.supabaseId?`<button class="secondary-btn" type="button" onclick="viewStudentProfile('${u.supabaseId}')">Ver perfil</button><button class="secondary-btn teacher-transfer-btn" type="button" onclick="transferStudent('${u.supabaseId}')">Transferir</button>`:''}</div>`}).join(""):'<div class="teacher-empty">Nenhum aluno entrou nesta turma ainda.</div>'}</div></section>`;
+ else if(tab==="students") {
+   // Mapeia cada aluno para a turma real carregada do Supabase.
+   const studentClassMap=new Map();
+   classes.forEach(c=>{
+     (c.members||[]).forEach(m=>{
+       const id=String(m.id||m.supabaseId||"");
+       if(id && !studentClassMap.has(id)) studentClassMap.set(id,c);
+     });
+   });
+   body=`<section class="menu-panel full"><div class="teacher-section-title"><h3>👥 Alunos ${selectedClass?'— '+selectedClass.name:''}</h3><span class="teacher-badge">${students.length} ALUNOS</span></div><div class="teacher-table">${topStudents.length?topStudents.map((u,i)=>{
+     const a=u.answered?Math.round((u.correct||0)/u.answered*100):0;
+     const alunoTurma=studentClassMap.get(String(u.supabaseId||""));
+     const turmaNome=alunoTurma?.name||"Turma não identificada";
+     const turmaCode=alunoTurma?.code||"";
+     return `<div class="teacher-row"><span>${i+1}</span><div style="min-width:170px;flex:1"><b style="display:block">${u.name}</b><small style="display:block;margin-top:4px;color:#78d9ad">🏫 ${turmaNome}${turmaCode?` — ${turmaCode}`:""}</small></div><small>${u.answered||0} questões</small><strong>${a}%</strong><em>${u.score||0} XP</em>${u.supabaseId?`<button class="secondary-btn" type="button" onclick="viewStudentProfile('${u.supabaseId}')">Ver perfil</button><button class="secondary-btn teacher-transfer-btn" type="button" onclick="transferStudent('${u.supabaseId}')">Transferir</button>`:""}</div>`;
+   }).join(""):'<div class="teacher-empty">Nenhum aluno entrou nesta turma ainda.</div>'}</div></section>`;
+ }
  else if(tab==="contents") {
    const practicedTopics=topics.filter(t=>t.answered>0);
    const contentQuestions=topics.reduce((n,t)=>n+t.answered,0);
@@ -6285,7 +6247,7 @@ async function renderTeacherDashboard(){
     <section class="menu-panel"><div class="teacher-section-title"><h3>⚠️ Conteúdos que merecem atenção</h3><span class="teacher-badge">DIAGNÓSTICO</span></div>${needsAttention.length?needsAttention.map(t=>`<div class="teacher-student-card"><span class="teacher-avatar">${t.accuracy}%</span><div><b>${t.topic}</b><small>${t.correct} acertos em ${t.answered} questões • ${t.active} aluno(s)</small></div><strong>${t.accuracy}%</strong></div>`).join(""):'<div class="teacher-empty">Ainda não há questões respondidas para gerar um diagnóstico.</div>'}</section>
    </div>`;
  }
- else if(tab==="classes") body=`<div class="teacher-content-grid"><section class="menu-panel"><h3>🏫 Criar turma</h3><p class="muted">Crie uma turma e compartilhe o código com os alunos.</p><form onsubmit="createClass(event)" style="display:grid;gap:10px;margin-top:12px"><label>Nome da turma<input id="newClassName" placeholder="Ex.: 8º Ano A" required></label><label>Ano<select id="newClassYear">${teacherYears().map(y=>`<option>${y}</option>`).join("")}</select></label><button class="action-btn" type="submit">Criar turma →</button></form></section><section class="menu-panel"><h3>📋 Minhas turmas</h3>${classes.length?classes.map(c=>`<div class="class-card" style="margin-top:9px"><h4>${c.name}</h4><div class="muted">${c.year} • ${(c.members||[]).length} aluno(s)</div><div class="class-code-box"><div><small>CÓDIGO</small><br><strong>${c.code}</strong></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="secondary-btn" onclick="teacherSelectedClass='${c.code}';teacherTab('students')">Abrir</button><button type="button" class="secondary-btn" style="border-color:#8b2d2d;color:#ff8f8f" data-delete-class="${String(c.code).replace(/"/g,'&quot;')}">🗑️ Excluir</button></div></div></div>`).join(""):'<div class="teacher-empty">Nenhuma turma criada ainda.</div>'}</section></div>`;
+ else if(tab==="classes") body=`<div class="teacher-content-grid"><section class="menu-panel"><h3>🏫 Criar turma</h3><p class="muted">Crie uma turma e compartilhe o código com os alunos.</p><form onsubmit="createClass(event)" style="display:grid;gap:10px;margin-top:12px"><label>Nome da turma<input id="newClassName" placeholder="Ex.: 8º Ano A" required></label><label>Ano<select id="newClassYear">${teacherYears().map(y=>`<option>${y}</option>`).join("")}</select></label><button class="action-btn" type="submit">Criar turma →</button></form></section><section class="menu-panel"><h3>📋 Minhas turmas</h3>${classes.length?classes.map(c=>`<div class="class-card" style="margin-top:9px"><h4>${c.name}</h4><div class="muted">${c.year} • ${Number.isFinite(Number(c.memberCount)) ? Number(c.memberCount) : (c.members||[]).length} aluno(s)</div><div class="class-code-box"><div><small>CÓDIGO</small><br><strong>${c.code}</strong></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="secondary-btn" onclick="teacherSelectedClass='${c.code}';teacherTab('students')">Abrir</button><button class="secondary-btn" style="border-color:#8b2d2d;color:#ff8f8f" onclick="deleteClass('${c.code}')">🗑️ Excluir</button></div></div></div>`).join(""):'<div class="teacher-empty">Nenhuma turma criada ainda.</div>'}</section></div>`;
  else body=`<div class="teacher-content-grid"><section class="menu-panel"><h3>📝 Criar atividade</h3><p class="muted">Escolha conteúdo, dificuldade, quantidade e turma. O sistema gera um código para compartilhar.</p><form onsubmit="createActivity(event)" style="display:grid;gap:10px;margin-top:12px"><label>Título<input id="activityTitle" placeholder="Ex.: Revisão de Frações" required></label><div class="teacher-form-grid"><label>Ano<select id="activityYear" onchange="refreshActivityForm()">${teacherYears().map(y=>`<option value="${y}" ${y===year?'selected':''}>${y}</option>`).join("")}</select></label><label>Conteúdo<select id="activityTopic">${Object.keys(questionBank[year]||{}).map(t=>`<option value="${t}">${t}</option>`).join("")}</select></label><label>Questões<input id="activityQty" type="number" min="1" max="10" value="5"></label><label>Dificuldade<select id="activityDifficulty"><option>Todas</option><option>Fácil</option><option>Médio</option><option>Difícil</option></select></label><label>Prazo de entrega<input id="activityDeadline" type="datetime-local"></label><label class="full">Turma<select id="activityClass" onchange="activityClassChange(this.value)">${classes.filter(c=>c.year===year).length?classes.filter(c=>c.year===year).map(c=>`<option value="${c.code}" ${selectedClass?.code===c.code||teacherSelectedClass===c.code?'selected':''}>${c.name} — ${c.code}</option>`).join(""):'<option value="ALL">Nenhuma turma cadastrada</option>'}</select></label></div><button class="action-btn" type="submit">Gerar atividade e código →</button></form></section><section class="menu-panel"><h3>📋 Atividades criadas</h3>${activities.length?activities.map(a=>`<div class="activity-card" style="margin-top:9px"><div><h4>${a.title}</h4><small>${a.topic} • ${a.quantity} questões • ${a.difficulty}</small><div style="margin-top:6px"><span class="activity-code">${a.code}</span></div><div class="muted" style="margin-top:6px">📅 Prazo: ${formatActivityDeadline(a.deadline)}</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary-btn" onclick="viewActivityResults('${a.code}')">Resultados</button><button class="secondary-btn" onclick="deleteActivity('${a.code}')">Excluir</button></div></div>`).join(""):'<div class="teacher-empty">Você ainda não criou atividades.</div>'}</section></div>`;
  document.getElementById("content").innerHTML=`<div class="section-title"><div><h3>👨‍🏫 Área do Professor</h3><div class="muted">Crie turmas, publique atividades e acompanhe a aprendizagem.</div></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="secondary-btn" onclick="openTeacherContextSelector()">🎓 ${year}${teacherSelectedClass!=="ALL" && selectedClass?` • ${selectedClass.name}`:" • Todas as turmas"}</button><span class="teacher-demo">☁ SUPABASE</span></div></div><div class="teacher-toolbar"><div class="teacher-toolbar-left"><label style="display:grid;gap:4px;font-size:9px;color:#8ea99d;text-transform:uppercase;font-weight:900">Ano<select onchange="teacherYearChange(this.value)">${teacherYears().map(y=>`<option value="${y}" ${y===year?'selected':''}>${y}</option>`).join("")}</select></label>${classes.length?`<label style="display:grid;gap:4px;font-size:9px;color:#8ea99d;text-transform:uppercase;font-weight:900">Turma<select onchange="(function(v){const cls=(window.__teacherClasses||[]).find(c=>c.code===v);saveTeacherContext({year:teacherSelectedYear,classCode:v,classId:cls?.id||null,className:v==='ALL'?'Todas as turmas':(cls?.name||'Turma')});renderTeacherDashboard()})(this.value)"><option value="ALL">Todas</option>${classes.map(c=>`<option value="${c.code}" ${selectedClass?.code===c.code?'selected':''}>${c.name}</option>`).join("")}</select></label>`:""}</div></div><div class="teacher-tabs"><button class="teacher-tab ${tab==='overview'?'active':''}" onclick="teacherTab('overview')">📊 Visão geral</button><button class="teacher-tab ${tab==='classes'?'active':''}" onclick="teacherTab('classes')">🏫 Turmas</button><button class="teacher-tab ${tab==='students'?'active':''}" onclick="teacherTab('students')">👥 Alunos</button><button class="teacher-tab ${tab==='contents'?'active':''}" onclick="teacherTab('contents')">📚 Conteúdos</button><button class="teacher-tab ${tab==='activities'?'active':''}" onclick="teacherTab('activities')">📝 Atividades</button></div>${body}`;
  if(tab==='activities') {
