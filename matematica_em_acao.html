@@ -1421,6 +1421,7 @@ try{
       <div><label for="loginEmail">E-mail</label><input id="loginEmail" type="email" autocomplete="email" placeholder="aluno@email.com" required></div>
       <div><label for="loginPassword">Senha</label><div class="password-field"><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Sua senha" required><button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)" aria-label="Mostrar senha">👁️</button></div></div>
       <div id="loginError" class="auth-error"></div>
+      <button id="resendConfirmationBtn" class="secondary-btn app-hidden" type="button" onclick="resendConfirmationEmail()" style="width:100%;margin-top:-4px;border-color:#1ee89a;color:#8fffd0">📧 Reenviar e-mail de confirmação</button>
       <button class="auth-submit" type="submit">Entrar</button>
     </form>
 
@@ -4013,9 +4014,46 @@ function showAuth(mode){
   document.getElementById("registerTab").classList.toggle("active", !login);
   document.getElementById("loginError").classList.remove("show");
   document.getElementById("registerError").classList.remove("show");
+  const resend=document.getElementById("resendConfirmationBtn");
+  if(resend) resend.classList.add("app-hidden");
 }
 function authMessage(id,msg){
   const el=document.getElementById(id); el.textContent=msg; el.classList.add("show");
+}
+
+let resendConfirmationBusy=false;
+let resendConfirmationTimer=null;
+
+async function resendConfirmationEmail(){
+  if(resendConfirmationBusy) return;
+  const email=normalizeEmail(document.getElementById("loginEmail")?.value||"");
+  if(!email){ authMessage("loginError","Digite seu e-mail para reenviar a confirmação."); return; }
+  const btn=document.getElementById("resendConfirmationBtn");
+  resendConfirmationBusy=true;
+  if(btn){ btn.disabled=true; btn.textContent="📨 Enviando..."; }
+  try{
+    const {error}=await supabaseClient.auth.resend({
+      type:"signup", email,
+      options:{emailRedirectTo:window.location.origin+window.location.pathname}
+    });
+    if(error) throw error;
+    authMessage("loginError","E-mail de confirmação reenviado! Verifique sua caixa de entrada e a pasta de spam.");
+    if(btn){
+      let seconds=60; btn.textContent=`📧 Reenviar novamente (${seconds}s)`;
+      resendConfirmationTimer=setInterval(()=>{
+        seconds--;
+        if(seconds<=0){
+          clearInterval(resendConfirmationTimer); resendConfirmationTimer=null; resendConfirmationBusy=false;
+          btn.disabled=false; btn.textContent="📧 Reenviar e-mail de confirmação";
+        }else btn.textContent=`📧 Reenviar novamente (${seconds}s)`;
+      },1000);
+    }else resendConfirmationBusy=false;
+  }catch(err){
+    console.error("Reenvio do e-mail de confirmação:",err); resendConfirmationBusy=false;
+    if(btn){ btn.disabled=false; btn.textContent="📧 Reenviar e-mail de confirmação"; }
+    const msg=String(err?.message||"").toLowerCase();
+    authMessage("loginError",(msg.includes("rate limit")||msg.includes("too many"))?"Limite de envio atingido. Aguarde um pouco antes de tentar novamente.":"Não foi possível reenviar o e-mail de confirmação. Verifique o endereço e tente novamente.");
+  }
 }
 function selectAvatar(btn){
   document.querySelectorAll(".avatar-choice").forEach(b=>b.classList.remove("selected"));
@@ -4087,7 +4125,10 @@ async function login(event){
         enterApp(); return;
       }
       const msg=(error.message||"").toLowerCase();
-      authMessage("loginError",msg.includes("email not confirmed")?"Confirme seu e-mail antes de entrar.":"E-mail ou senha incorretos.");
+      const notConfirmed=msg.includes("email not confirmed") || msg.includes("email_not_confirmed");
+      authMessage("loginError",notConfirmed?"Confirme seu e-mail antes de entrar.":"E-mail ou senha incorretos.");
+      const resend=document.getElementById("resendConfirmationBtn");
+      if(resend) resend.classList.toggle("app-hidden",!notConfirmed);
       return;
     }
     const user=data.user; if(!user){authMessage("loginError","Não foi possível entrar.");return;}
@@ -6909,10 +6950,33 @@ async function renderPerformance(){
  }).join('');
 }
 
-async function fetchCloudRanking(year, scope="year"){
+async function fetchCloudRanking(year, scope="year", selectedClassCode=""){
   try{
     const yearNumber=Number(String(year).match(/\d+/)?.[0]||0);
     if(scope==="class"){
+      const wantedClass=String(selectedClassCode||"").trim();
+      if(wantedClass && wantedClass!=="ALL"){
+        // Quando o professor escolhe uma turma específica, o ranking da tela
+        // inicial deve obedecer exatamente a esse contexto, e não à turma do
+        // próprio usuário. O código da turma vem do contexto do professor.
+        const {data,error}=await supabaseClient
+          .from("ranking_alunos")
+          .select("id,nome_exibicao,ano_escolar,avatar,xp,codigo_turma")
+          .eq("ano_escolar",yearNumber)
+          .eq("codigo_turma",wantedClass)
+          .order("xp",{ascending:false});
+        if(error) throw error;
+        return (data||[]).filter(u=>String(u.id)!=="1621e45d-a0ea-42ec-95d7-85beaeeec053").map(u=>({
+          id:u.id,
+          name:u.nome_exibicao||"Aluno",
+          year:`${u.ano_escolar}º ano`,
+          avatar:u.avatar||"🧑‍🎓",
+          classCode:u.codigo_turma||"",
+          score:Number(u.xp||0),
+          supabaseId:u.id,
+          isMe:currentUser?.supabaseId===u.id
+        }));
+      }
       const {data,error}=await supabaseClient.rpc("ranking_minha_turma");
       if(error) throw error;
       return (data||[]).filter(u=>Number(u.ano_escolar)===yearNumber && String(u.id)!=="1621e45d-a0ea-42ec-95d7-85beaeeec053").map(u=>({
@@ -6990,8 +7054,15 @@ function renderHome(){
  const u=getCurrentRecord()||{name:currentUser?.name||'Aluno',year:currentUser?.year||'9º ano',score:score,answered:0,correct:0,streak:0};
  const xp=u.score||0, r=rankInfo(xp);
  const rankingYear=isProfessor()?teacherContextYear():u.year;
+ const rankingClassCode=isProfessor()?teacherContextClassCode():"ALL";
  const all=users()
    .filter(x=>x.year===rankingYear)
+   .filter(x=>{
+     if(isProfessor() && rankingClassCode && rankingClassCode!=="ALL"){
+       return String(x.classCode||"").trim().toUpperCase()===String(rankingClassCode).trim().toUpperCase();
+     }
+     return true;
+   })
    .filter(x=>{
      if(!isProfessor()) return true;
      const sid=String(x?.supabaseId||"").trim();
@@ -7110,7 +7181,7 @@ function renderHome(){
    </section>
 
    <section class="home-card">
-    <div class="home-card-head"><h3>🏆 RANKING — ${isProfessor()?teacherContextYear():u.year}</h3><span>Ver ranking</span></div>
+    <div class="home-card-head"><h3>🏆 RANKING — ${isProfessor()?teacherContextYear():u.year}${isProfessor()&&rankingClassCode&&rankingClassCode!=="ALL"?` • ${rankingClassCode}`:""}</h3><span>Ver ranking</span></div>
     <div class="mini-ranking" id="homeMiniRanking">
       ${all.slice(0,10).map((x,i)=>{
         const rr=rankInfo(x.score);
@@ -7134,7 +7205,8 @@ function renderHome(){
  // completo. Isso garante que, para o professor, todos os alunos do ano
  // apareçam e que o próprio professor nunca seja incluído.
  if(currentUser?.supabaseId && typeof fetchCloudRanking==="function"){
-   fetchCloudRanking(u.year,"year").then(cloudList=>{
+   const homeScope=isProfessor() && rankingClassCode && rankingClassCode!=="ALL" ? "class" : "year";
+   fetchCloudRanking(rankingYear,homeScope,rankingClassCode).then(cloudList=>{
      const box=document.getElementById("homeMiniRanking");
      if(!box || !Array.isArray(cloudList)) return;
 
